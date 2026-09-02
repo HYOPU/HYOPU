@@ -38,6 +38,7 @@ function harness(reload) {
   const messages=[];
   const frame=node('#sof-frame');frame.contentWindow={postMessage(message){messages.push(message);}};
   const workspace = createVesselWorkspace({
+    confirmDiscard:async()=>true,
     getCall: (id, refresh) => refresh ? reload.promise : calls[id],
     getSession: () => ({ authenticated: true, member: { role: 'editor' } }),
     saveCall: async call => { saved = structuredClone(call); return call; },
@@ -63,15 +64,15 @@ test('a delayed reload of A cannot turn the visible B editor into an A draft', a
   const reload = deferred();
   const app = harness(reload);
   try {
-    app.workspace.open('A');
+    await app.workspace.open('A');
     const pending = app.click('reload-call');
-    app.workspace.open('B');
+    await app.workspace.open('B');
     const switchedImmediately = app.dialog.innerHTML.includes('BETA');
     reload.resolve({ ...app.calls.A, notes: 'Response for A only' });
     await pending;
     // Both safe implementations are accepted: lock navigation while loading,
     // or allow navigation but reject the obsolete A response by generation/id.
-    if (!switchedImmediately) app.workspace.open('B');
+    if (!switchedImmediately) await app.workspace.open('B');
     assert.ok(app.dialog.innerHTML.includes('BETA'));
     app.editNotes('Intended for B');
     await app.click('save-call');
@@ -85,16 +86,16 @@ test('a delayed TXT read for A cannot inject A report text into B', async () => 
   const read = deferred();
   const app = harness(deferred());
   try {
-    app.workspace.open('A');
+    await app.workspace.open('A');
     const pending = app.callbacks.change({ target: {
       id: 'latest-report-file',
       files: [{ size: 100, text: () => read.promise }],
     } });
-    app.workspace.open('B');
+    await app.workspace.open('B');
     const switchedImmediately = app.dialog.innerHTML.includes('BETA');
     read.resolve('ALPHA / V1 / ULSAN / DEP.REPORT\nReport intended for A only.');
     await pending;
-    if (!switchedImmediately) app.workspace.open('B');
+    if (!switchedImmediately) await app.workspace.open('B');
     app.editNotes('Intended for B');
     await app.click('save-call');
     assert.equal(app.saved.id, 'B');

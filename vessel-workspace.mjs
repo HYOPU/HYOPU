@@ -9,7 +9,18 @@ const definitions = {
 };
 const tabLabels = [['overview','입항 정보'],['activities','ACTIVITY'],['cargo','화물 정보'],['crew','선원 교대'],['tasks','TO DO'],['reports','리포트'],['sof','SOF 자동화']];
 const options = (values, selected, empty=false) => `${empty?'<option value="">미배정</option>':''}${values.map(value=>`<option value="${esc(value)}" ${value===selected?'selected':''}>${esc(value)}</option>`).join('')}`;
-export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved }) {
+function confirmAction(message) {
+  return new Promise(resolve=>{
+    const prompt=document.createElement('dialog');prompt.className='confirm-dialog';
+    prompt.innerHTML=`<h3>변경사항 확인</h3><p>${esc(message)}</p><div class="form-actions"><button class="subtle" data-answer="no">취소</button><button class="primary" data-answer="yes">계속</button></div>`;
+    document.body.append(prompt);
+    const finish=value=>{prompt.close();prompt.remove();resolve(value);};
+    prompt.addEventListener('cancel',event=>{event.preventDefault();finish(false);});
+    prompt.addEventListener('click',event=>{const answer=event.target.closest('[data-answer]');if(answer)finish(answer.dataset.answer==='yes');});
+    prompt.showModal();
+  });
+}
+export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, confirmDiscard = confirmAction }) {
   const dialog=document.querySelector('#vessel-dialog');
   let draft=null, dirty=false, tab='overview', original=null, busy=false, opener=null, generation=0, startNewSof=false;
   const $=selector=>dialog.querySelector(selector);
@@ -43,8 +54,8 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved }
     $('#detail-panel').innerHTML=content;
     dialog.querySelectorAll('[data-tab]').forEach(button=>button.classList.toggle('active',button.dataset.tab===tab));
   }
-  function open(id) {
-    if(dialog.open&&!close())return;
+  async function open(id) {
+    if(dialog.open&&!await close())return;
     generation++;startNewSof=false;
     opener=document.activeElement;
     original=id?getCall(id):null;
@@ -54,9 +65,9 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved }
     $('#save-call').insertAdjacentHTML('beforebegin','<button id="draft-login" class="subtle">팀 로그인</button>');
     renderPanel();updateSaveStatus();dialog.showModal();
   }
-  function close() {
+  async function close() {
     if(busy)return false;
-    if(dirty&&!window.confirm('저장되지 않은 변경사항이 있습니다. 닫으면 사라집니다. 닫을까요?'))return false;
+    if(dirty&&!await confirmDiscard('저장되지 않은 변경사항이 있습니다. 닫으면 사라집니다. 닫을까요?'))return false;
     generation++;dialog.close();draft=null;dirty=false;if(opener?.isConnected)opener.focus();return true;
   }
   dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
@@ -78,13 +89,13 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved }
     const button=event.target.closest('button');if(!button||!draft||busy)return;
     if(button.dataset.tab){if(button.classList.contains('report-to-sof')){if(!draft.latestReport.trim()){updateSaveStatus('먼저 새 리포트 원문을 입력해 주세요.');return;}startNewSof=true;}tab=button.dataset.tab;renderPanel();}
     if(button.dataset.addRow){const key=button.dataset.addRow;draft[key].push(Object.fromEntries(definitions[key].map(([name,,type])=>[name,type==='checkbox'?false:type==='crew-kind'?'ON-SIGNER':''])));markDirty();renderPanel();}
-    if(button.id==='import-sof-cargo'&&draft.sof){if(!validation.sofMatchesCall(draft.sof,draft)){updateSaveStatus('SOF와 입항 정보가 다릅니다. 화물을 가져오지 않았습니다.');return;}if(draft.cargo.length&&!window.confirm('현재 화물 표를 SOF 분석 화물로 바꿀까요?'))return;draft.cargo=draft.sof.groups.flatMap(group=>group.cargo.map(cargo=>({operation:group.operation,number:cargo.number,name:cargo.name,bl:cargo.bl==null?'':String(cargo.bl),ship:cargo.ship==null?'':String(cargo.ship),tanks:cargo.tank,party:cargo.party||'',note:group.berth})));markDirty();renderPanel();}
+    if(button.id==='import-sof-cargo'&&draft.sof){if(!validation.sofMatchesCall(draft.sof,draft)){updateSaveStatus('SOF와 입항 정보가 다릅니다. 화물을 가져오지 않았습니다.');return;}if(draft.cargo.length&&!await confirmDiscard('현재 화물 표를 SOF 분석 화물로 바꿀까요?'))return;draft.cargo=draft.sof.groups.flatMap(group=>group.cargo.map(cargo=>({operation:group.operation,number:cargo.number,name:cargo.name,bl:cargo.bl==null?'':String(cargo.bl),ship:cargo.ship==null?'':String(cargo.ship),tanks:cargo.tank,party:cargo.party||'',note:group.berth})));markDirty();renderPanel();}
     if(button.dataset.removeRow){draft[button.dataset.removeRow].splice(Number(button.dataset.index),1);markDirty();renderPanel();}
     if(button.id==='close-vessel')close();
     if(button.id==='draft-login')document.querySelector('#login-dialog').showModal();
     if(button.id==='backup-draft') {const url=URL.createObjectURL(new Blob([JSON.stringify(draft,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`HYOPU_DRAFT_${draft.vessel.replace(/[^a-z0-9_-]/gi,'_')||'new'}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);updateSaveStatus('초안 파일을 다운로드했습니다. 공유 저장은 별도로 필요합니다.');}
     if(button.id==='reload-call'){
-      if(dirty&&!window.confirm('내 초안을 버리고 최신 공유 기록을 불러올까요? 필요하면 먼저 초안 백업을 눌러 주세요.'))return;
+      if(dirty&&!await confirmDiscard('내 초안을 버리고 최신 공유 기록을 불러올까요? 필요하면 먼저 초안 백업을 눌러 주세요.'))return;
       const ticket=generation,callId=draft.id;busy=true;updateSaveStatus('최신 공유 기록을 불러오는 중…');
       try{const latest=await getCall(callId,true);if(ticket!==generation||draft?.id!==callId)return;if(!latest){updateSaveStatus('아직 공유 저장된 기록이 없습니다.');return;}draft=structuredClone(latest);original=latest;dirty=false;renderPanel();updateSaveStatus();}catch(error){if(ticket===generation)updateSaveStatus(error.message);}finally{if(ticket===generation){busy=false;const message=$('#save-status').textContent;updateSaveStatus(message);}}
     }
