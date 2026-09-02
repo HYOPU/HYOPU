@@ -173,6 +173,9 @@ $('#reset').onclick = () => {
 // Same-origin, per-port-call bridge. No cross-window/global report storage.
 if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
   document.body.classList.add('embedded-sof');
+  const contextInputs=Array.from($('#upload-panel').querySelectorAll('input,textarea,button'));
+  contextInputs.forEach(input=>{input.disabled=true;});
+  status('선박 작업 공간에 연결하는 중…');
   $('#report-text').addEventListener('input',()=>{if(workspaceContext)window.parent.postMessage({type:'hyopu:sof-raw',callId:workspaceContext.callId,raw:$('#report-text').value},location.origin);});
   window.addEventListener('message', event => {
     if(event.origin!==location.origin||event.source!==window.parent||event.data?.type!=='hyopu:sof-context')return;
@@ -182,6 +185,8 @@ if (typeof window !== 'undefined' && window.parent && window.parent !== window) 
     if(heading)heading.textContent=`${context.vessel||''} / ${context.voyage||''} / ${context.port||''} · 현재 입항 건의 SOF 작업`;
     if(typeof event.data.raw==='string')$('#report-text').value=event.data.raw;
     if(event.data.report)showReport(event.data.report,'저장된 선박 SOF');
+    else status('리포트를 입력하거나 파일을 선택해 분석해 주세요.');
+    contextInputs.forEach(input=>{input.disabled=false;});
   });
   window.parent.postMessage({type:'hyopu:sof-ready'},location.origin);
 }
