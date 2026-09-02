@@ -8,8 +8,12 @@
 
 ## 배포
 
-Vercel 프로젝트 설정에서 Framework Preset을 **Other**로 지정하고 배포합니다. 별도의 빌드 명령이나 환경 변수는 필요하지 않습니다.
+Vercel에서는 Framework Preset을 **Other**로 설정합니다. 별도의 빌드 명령은 필요하지 않습니다.
 
-## Supabase 연동 방향
+## Supabase 연동
 
-파일·생성 이력을 저장하려면 Supabase Storage 버킷(`reports`)과 `sof_documents` 테이블을 만든 뒤, Vercel 서버리스 API를 추가해 서비스 키를 서버 환경변수로만 사용하세요. 브라우저에 서비스 키를 넣으면 안 됩니다.
+1. Supabase SQL Editor에서 `supabase/schema.sql`을 실행합니다.
+2. Vercel Environment Variables에 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 추가합니다.
+3. 생성된 SOF 파일과 메타데이터는 비공개 `sof-documents` Storage 버킷 및 `sof_documents` 테이블에 기록됩니다.
+
+서비스 키는 Vercel 서버 환경 변수로만 보관하며, 브라우저에 노출하지 않습니다.
