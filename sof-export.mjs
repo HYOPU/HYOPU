@@ -1,5 +1,5 @@
 import { unzipSync, zipSync, strFromU8, strToU8 } from 'fflate';
-import { displayTime, monthLabel } from './sof-parser.mjs';
+import { displayTime, monthLabel, applyNorTenderedRule } from './sof-parser.mjs';
 const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 const REL='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 const PKG='http://schemas.openxmlformats.org/package/2006/relationships';
@@ -31,6 +31,7 @@ function remarkLines(remarks){const out=[];for(const remark of remarks)for(let l
 // are excluded from the built-in asset, independently of the company logo.
 export function exportSof(templateBytes,report,xml={DOMParser,XMLSerializer}) {
   if(!report.groups.length)throw new Error('내보낼 화물이 없습니다.');
+  applyNorTenderedRule(report);
   if(report.groups.some(g=>g.cargo.some(c=>['bl','ship'].some(k=>c[k]!=null&&!Number.isFinite(c[k])))))throw new Error('B/L 또는 SHIP 수량은 숫자로 입력해 주세요.');
   const files=unzipSync(new Uint8Array(templateBytes));
   const parse=value=>new xml.DOMParser().parseFromString(value,'application/xml');

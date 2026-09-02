@@ -14,7 +14,7 @@ test('BETULA: four cargo berths, seven cargos, source values take priority',()=>
  const r=parse('betula');assert.equal(r.fields.voyage,'HBR 190');assert.deepEqual(r.groups.map(g=>g.sheetName),['OP6','JSTT3','OTK(S)','CTK']);assert.equal(r.cargo.length,7);
  assert.equal(r.cargo.find(c=>c.number==='390').completed,'2026-06-29T18:45');assert.equal(r.cargo.find(c=>c.number==='310').bl,1000.278);assert.equal(r.cargo.find(c=>c.number==='315').name,'NORMAL PARAFFIN C10-13');
  assert.equal(r.groups[2].leftBerth,'2026-07-01T02:44');assert.equal(r.groups[3].pilotIn,'2026-07-02T02:15');assert.equal(r.groups[3].cargo[0].hoseOn,'2026-07-02T06:00');
- assert.equal(r.groups[0].norTendered,'2026-06-28T11:42');assert.ok(r.groups.every(g=>g.norAccepted===''));assert.equal(r.groups[1].norTendered,'');
+ assert.equal(r.groups[0].norTendered,'2026-06-28T11:42');assert.ok(r.groups.every(g=>g.norAccepted===''));assert.equal(r.groups[1].norTendered,'2026-06-29T04:00');
  assert.equal(r.groups[1].tanksInspected,'SEE REMARK');assert.ok(r.groups[3].remarks.some(x=>x.includes('30/2355~02/0215')));
 });
 test('KASHI: PACS voyage, discharge table without slash or SHIP FIG, layby excluded',()=>{
