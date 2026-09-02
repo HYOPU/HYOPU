@@ -57,3 +57,25 @@
     <script src="./app.js"></script>
   </body>
 </html>
+<style>
+.report-input-label{display:block;margin:28px 0 8px;font-size:13px;font-weight:700;color:var(--ink)}
+#report-text{display:block;box-sizing:border-box;width:100%;resize:vertical;border:1px solid var(--line);border-radius:4px;padding:12px 14px;background:#fff;color:var(--ink);font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#report-text:focus{outline:2px solid color-mix(in srgb,var(--accent) 35%,transparent);border-color:var(--accent)}
+.paste-button{margin-top:10px}
+</style>
+<script>
+document.querySelector('#parse-text').onclick = () => {
+  const text = document.querySelector('#report-text').value.trim();
+  if (!text) { alert('붙여넣을 운항 리포트를 입력해 주세요.'); return; }
+  try {
+    extractText(text);
+    document.querySelector('#file-name').textContent = '붙여넣은 운항 리포트';
+    document.querySelector('#upload-panel').classList.add('hidden');
+    document.querySelector('#review-panel').classList.remove('hidden');
+    render();
+  } catch (error) {
+    alert('붙여넣은 리포트를 분석하지 못했습니다. 형식을 확인해 주세요.');
+    console.error(error);
+  }
+};
+</script>
