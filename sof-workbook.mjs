@@ -40,5 +40,6 @@ export function importWorkbook(workbook) {
   }
   if(!result.groups.length)return parseReport(reportLines.join('\n'));
   result.warnings.push('기존 Time Sheet에서 읽은 값입니다. 새 리포트와 일치하는지 확인해 주세요. 기존 서명·도장은 복제하지 않습니다.');
+  result.warnings.push('기존 SOF에는 대기 부두를 포함한 전체 이동 이력이 없으므로 NOR는 기재값을 보존합니다. 자동 계산하려면 운항 리포트 원문을 분석해 주세요.');
   result.cargo=result.groups.flatMap(g=>g.cargo);return result;
 }

@@ -33,8 +33,26 @@ function createApp({ templateStatus = 200, saveResponse = { ok: true, body: { sa
   function element(tagName, attributes = '') {
     const listeners = new Map();
     const classes = new Set(attributes.match(/\bclass="([^"]*)"/)?.[1].split(/\s+/).filter(Boolean) || []);
+    let markup = '';
+    let descendants = null;
     return {
-      tagName, value: '', textContent: '', innerHTML: '', dataset: {}, files: [],
+      tagName, value: '', textContent: '', dataset: {}, files: [],
+      get innerHTML() { return markup; },
+      set innerHTML(value) { markup = String(value); descendants = null; },
+      querySelectorAll(selector) {
+        assert.ok(['input[data-key="norTendered"]', 'span[data-nor-note]', '[data-nor-note]', 'textarea[data-key="remarks"]'].includes(selector), `Unexpected generated-element selector: ${selector}`);
+        if (!descendants) {
+          const parsed = new DOMParser().parseFromString(`<main>${markup}</main>`, 'text/html');
+          descendants = Array.from(parsed.getElementsByTagName('*')).filter(node => ['input', 'textarea'].includes(node.tagName) || node.hasAttribute('data-nor-note')).map(node => {
+            const child = element(node.tagName);
+            child.value = node.tagName === 'textarea' ? node.textContent : node.getAttribute('value') || '';
+            child.textContent = node.textContent;
+            child.dataset = Object.fromEntries(Array.from(node.attributes).filter(attribute => attribute.name.startsWith('data-')).map(attribute => [attribute.name.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase()), attribute.value]));
+            return child;
+          });
+        }
+        return descendants.filter(node => selector.startsWith('input') ? node.tagName === 'input' && node.dataset.key === 'norTendered' : selector.startsWith('textarea') ? node.tagName === 'textarea' && node.dataset.key === 'remarks' : node.dataset.norNote !== undefined);
+      },
       checked: /(?:^|\s)checked(?:\s|=|$)/.test(attributes),
       disabled: /(?:^|\s)disabled(?:\s|=|$)/.test(attributes),
       classList: {
@@ -68,6 +86,7 @@ function createApp({ templateStatus = 200, saveResponse = { ok: true, body: { sa
       assert.ok(ids.has(selector.slice(1)), `Application references missing HTML element ${selector}`);
       return ids.get(selector.slice(1));
     },
+    querySelectorAll(selector) { return Array.from(ids.values()).flatMap(node => node.querySelectorAll(selector)); },
     createElement(tagName) {
       assert.equal(tagName, 'a');
       return element(tagName);
@@ -113,6 +132,18 @@ function cargoInput(app, group, cargo, key) {
     node.getAttribute('data-g') === String(group) && node.getAttribute('data-c') === String(cargo) && node.getAttribute('data-key') === key);
   assert.ok(input, `Missing rendered cargo field ${group}/${cargo}/${key}`);
   return input.getAttribute('value');
+}
+
+function norInput(app, group) {
+  const input = app.context.document.querySelectorAll('input[data-key="norTendered"]').find(node => node.dataset.g === String(group));
+  assert.ok(input, `Missing rendered NOR field for group ${group}`);
+  return input;
+}
+
+function norNote(app, group) {
+  const note = app.context.document.querySelectorAll('[data-nor-note]').find(node => node.dataset.norNote === String(group));
+  assert.ok(note, `Missing rendered NOR explanation for group ${group}`);
+  return note;
 }
 
 async function downloadedWorkbook(app) {
@@ -230,6 +261,63 @@ test('edited B/L and SHIP remain independent, including explicit numeric zero in
   assert.equal(workbook.Sheets['JSTT SP5'].N22.v, 5001.25);
   assert.equal(workbook.Sheets['JSTT SP5'].O22.v, 0);
   assert.equal(workbook.Sheets['JSTT SP5'].O22.t, 'n');
+});
+
+test('arrival NOR TENDER without ED is visible in the real app and downloaded first sheet', async () => {
+  const app = createApp();
+  await app.paste(fixture('larix').replace('& NOR TENDERED', '& N.O.R. TENDER'));
+  assert.equal(norInput(app, 0).value, '19/0735');
+  await app.get('download').click();
+  const workbook = await downloadedWorkbook(app);
+  assert.equal(workbook.Sheets.P63.B15.v, '19/0735');
+  assert.equal(workbook.Sheets['OCEAN ACE 11'].B15.v, '21/1320');
+});
+
+test('editing the previous berth HOSE OFF updates NOR inputs in place and the downloaded B15', async () => {
+  const app = createApp();
+  await app.paste(fixture('betula'));
+  const targetNor = norInput(app, 1);
+  assert.equal(targetNor.value, '29/0400');
+  const originalMarkup = app.get('sheets').innerHTML;
+  await app.get('review-panel').dispatch('input', { target: { dataset: { g: '0', c: '0', key: 'hoseOff' }, value: '29/0430' } });
+  assert.equal(norInput(app, 1), targetNor, 'NOR is updated without replacing the focused editor markup');
+  assert.equal(targetNor.value, '29/0430');
+  assert.match(norNote(app, 1).textContent, /29\/0430/);
+  assert.equal(app.get('sheets').innerHTML, originalMarkup);
+  await app.get('download').click();
+  const workbook = await downloadedWorkbook(app);
+  assert.equal(workbook.Sheets.JSTT3.B15.v, '29/0430');
+  assert.equal(workbook.Sheets['OTK(S)'].B15.v, '30/0515');
+  assert.equal(workbook.Sheets.CTK.B15.v, 'REVIEW');
+});
+
+test('correcting an incomplete previous HOSE OFF refreshes NOR review notes and remarks in place', async () => {
+  const app = createApp();
+  await app.paste(fixture('betula'));
+  await app.get('review-panel').dispatch('input', { target: { dataset: { g: '0', c: '0', key: 'hoseOff' }, value: '' } });
+  assert.equal(norInput(app, 1).value, '');
+  assert.match(norNote(app, 1).textContent, /확인 필요/);
+  const remarks = app.context.document.querySelectorAll('textarea[data-key="remarks"]').find(input => input.dataset.g === '1');
+  assert.match(remarks.value, /REVIEW REQUIRED: NOR TENDERED/);
+  await app.get('review-panel').dispatch('input', { target: { dataset: { g: '0', c: '0', key: 'hoseOff' }, value: '29/0430' } });
+  assert.equal(norInput(app, 1).value, '29/0430');
+  assert.match(norNote(app, 1).textContent, /29\/0430/);
+  assert.ok(!/REVIEW REQUIRED: NOR TENDERED/.test(remarks.value));
+});
+
+test('adding then removing a later HOSE OFF cargo recalculates the next berth NOR', async () => {
+  const app = createApp();
+  await app.paste(fixture('betula'));
+  await app.get('sheets').dispatch('click', { target: { dataset: { add: '0' } } });
+  await app.get('review-panel').dispatch('input', { target: { dataset: { g: '0', c: '1', key: 'number' }, value: '999' } });
+  await app.get('review-panel').dispatch('input', { target: { dataset: { g: '0', c: '1', key: 'hoseOff' }, value: '29/0530' } });
+  assert.equal(norInput(app, 1).value, '29/0530');
+  await app.get('sheets').dispatch('click', { target: { dataset: { g: '0', remove: '1' } } });
+  assert.equal(norInput(app, 1).value, '29/0400');
+  await app.get('download').click();
+  const workbook = await downloadedWorkbook(app);
+  assert.equal(workbook.Sheets.JSTT3.B15.v, '29/0400');
+  assert.equal(workbook.Sheets.OP6.A24?.v ?? null, null);
 });
 
 test('XLSX upload uses bundled SheetJS and preserves every exported berth without CDN globals', async () => {

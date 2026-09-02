@@ -1,5 +1,5 @@
 import { read } from 'xlsx';
-import { parseReport, displayTime, resolveEditedTime } from './sof-parser.mjs';
+import { parseReport, displayTime, resolveEditedTime, applyNorTenderedRule } from './sof-parser.mjs';
 import { importWorkbook } from './sof-workbook.mjs';
 import { exportSof } from './sof-export.mjs';
 
@@ -44,11 +44,25 @@ function render() {
       <label><span>BERTH</span><input data-g="${index}" data-key="berth" value="${esc(group.berth)}"></label>
       <label><span>OPERATION</span><select data-g="${index}" data-key="operation"><option value="LOAD" ${group.operation === 'LOAD' ? 'selected' : ''}>LOAD</option><option value="DISCH" ${/^DISCH/i.test(group.operation) ? 'selected' : ''}>DISCH</option></select></label>
     </div>
-    <div class="summary-grid facts">${facts.map(([key, label]) => `<label><span>${label}</span><input data-g="${index}" data-key="${key}" value="${esc(displayTime(group[key]))}" placeholder="${/^nor/.test(key) ? '확인 필요 (원문 미기재)' : ''}" title="${esc(group[key])}"></label>`).join('')}</div>
+    <div class="summary-grid facts">${facts.map(([key, label]) => `<label><span>${label}</span><input aria-label="${label}" data-g="${index}" data-key="${key}" value="${esc(displayTime(group[key]))}" placeholder="${/^nor/.test(key) ? '확인 필요 (원문 미기재)' : ''}" title="${esc(group[key])}" ${key === 'norTendered' && group.norTenderedAuto ? 'readonly' : ''}>${key === 'norTendered' ? `<small data-nor-note="${index}">${esc(group.norTenderedExplanation || '기존 SOF의 NOR 값 · 부두 이동 원문 대조 필요')}</small>` : ''}</label>`).join('')}</div>
     <div class="table-wrap"><table><thead><tr>${cargoFields.map(([, label]) => `<th>${label}</th>`).join('')}<th></th></tr></thead><tbody>${group.cargo.map((cargo, cargoIndex) => `<tr>${cargoFields.map(([key]) => `<td><input aria-label="${key}" data-g="${index}" data-c="${cargoIndex}" data-key="${key}" value="${esc(timeFields.has(key) ? displayTime(cargo[key]) : cargo[key])}" ${['bl', 'ship'].includes(key) ? 'inputmode="decimal" placeholder="미기재"' : ''}></td>`).join('')}<td><button data-remove="${cargoIndex}" data-g="${index}" class="delete" aria-label="화물 삭제">×</button></td></tr>`).join('')}</tbody></table></div>
     <button class="secondary add-cargo" data-add="${index}">+ 화물 추가</button>
     <label class="remarks-label">REMARKS (한 줄에 한 항목)<textarea data-g="${index}" data-key="remarks" rows="${Math.min(12, Math.max(3, group.remarks.length + 1))}">${esc(group.remarks.join('\n'))}</textarea></label>
   </article>`).join('');
+}
+
+// Updating only dependent fields keeps the user's cursor in the HOSE OFF input.
+function refreshNorFields() {
+  applyNorTenderedRule(state);
+  $('#warnings').textContent = state.warnings.join('\n');
+  for (const input of document.querySelectorAll('input[data-key="norTendered"]')) {
+    const group = state.groups[input.dataset.g];
+    input.value = displayTime(group.norTendered);
+    input.title = group.norTendered || '';
+    input.readOnly = Boolean(group.norTenderedAuto);
+  }
+  for (const note of document.querySelectorAll('[data-nor-note]')) note.textContent = state.groups[note.dataset.norNote].norTenderedExplanation || '기존 SOF의 NOR 값 · 부두 이동 원문 대조 필요';
+  for (const input of document.querySelectorAll('textarea[data-key="remarks"]')) input.value = state.groups[input.dataset.g].remarks.join('\n');
 }
 
 async function readFile(file) {
@@ -127,18 +141,21 @@ $('#review-panel').addEventListener('input', event => {
   if (field) { state.fields[field] = event.target.value; return; }
   if (g === undefined || !key) return;
   const target = c === undefined ? state.groups[g] : state.groups[g].cargo[c];
+  if (key === 'norTendered' && target.norTenderedAuto) { refreshNorFields(); return; }
   let value = key === 'remarks' ? event.target.value.split('\n').filter(Boolean) : event.target.value;
   if (['bl', 'ship'].includes(key)) value = value.trim() === '' ? null : Number(value.replace(/,/g, ''));
   else if (timeFields.has(key)) value = resolveEditedTime(value, target[key] || state.groups[g].berthAt);
   target[key] = value;
+  if (key === 'hoseOff' || key === 'norTendered' || key === 'berthAt') refreshNorFields();
 });
 $('#sheets').addEventListener('click', event => {
   const { add, remove, g } = event.target.dataset;
   if (add !== undefined) {
     state.groups[add].cargo.push({ number: '', name: '', party: '', tank: '', line: '', hoseOn: '', commenced: '', completed: '', hoseOff: '', bl: null, ship: null });
+    applyNorTenderedRule(state);
     render();
   }
-  if (remove !== undefined) { state.groups[g].cargo.splice(Number(remove), 1); render(); }
+  if (remove !== undefined) { state.groups[g].cargo.splice(Number(remove), 1); applyNorTenderedRule(state); render(); }
 });
 $('#download').onclick = download;
 $('#reset').onclick = () => location.reload();
