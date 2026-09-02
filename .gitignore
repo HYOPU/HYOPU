@@ -1,0 +1,7 @@
+.vercel/
+.env
+.env.local
+node_modules/
+dist/
+*.inspect.ndjson
+~$*.xlsx

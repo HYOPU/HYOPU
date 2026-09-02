@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="운항 보고서에서 Statement of Facts를 생성합니다." />
+    <title>SOF Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./template.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="SOF Studio 홈"><span class="brand-mark">S</span> SOF Studio</a>
+        <span class="secure"><span class="dot"></span> 브라우저 내 변환</span>
+      </header>
+
+      <section class="hero">
+        <p class="eyebrow">MARITIME DOCUMENT AUTOMATION</p>
+        <h1>리포트에서 신뢰할 수 있는<br /><em>SOF를 만듭니다.</em></h1>
+        <p class="lede">운항 리포트 또는 Time Sheet를 올리면 항차별 Statement of Facts를 정리하고, 검토 가능한 엑셀 파일로 바로 내보냅니다.</p>
+      </section>
+
+      <section class="workspace" aria-label="SOF 생성 작업공간">
+        <div class="stepper" aria-label="진행 상태"><span class="active">01 업로드</span><i></i><span>02 검토</span><i></i><span>03 내보내기</span></div>
+        <div id="upload-panel" class="upload-panel">
+          <label id="dropzone" class="dropzone" for="report-file">
+            <input id="report-file" type="file" accept=".xlsx,.xls,.csv,.txt" hidden />
+            <span class="upload-icon">↑</span>
+            <strong>운항 리포트 또는 Time Sheet 업로드</strong>
+            <small>XLSX, XLS, CSV 또는 TXT · 최대 20MB</small>
+            <span class="choose">파일 선택</span>
+          </label>
+          <div class="hint"><strong>지원하는 정보</strong><span>입출항 · NOR · 접안 · 화물 작업 · Pilot · 출항 · 화물/탱크 정보</span></div>
+          <label class="report-input-label" for="report-text">또는 이메일 리포트 붙여넣기</label>
+          <textarea id="report-text" rows="12" placeholder="선명 / 항차 / ULSAN / DEP.REPORT&#10;AUG' 2026&#10;26/1100 : EOSP"></textarea>
+          <button id="parse-text" class="primary paste-button">리포트 분석</button>
+        </div>
+
+        <section id="review-panel" class="review-panel hidden" aria-live="polite">
+          <div class="review-head"><div><p class="eyebrow">READY FOR REVIEW</p><h2 id="file-name">리포트</h2><p id="sheet-count"></p></div><div class="review-tools"><button id="edit-report" class="text-button">리포트 수정</button><button id="replace-file" class="text-button">다른 파일 선택</button></div></div>
+          <div class="summary-grid" id="summary-grid"></div>
+          <div id="warnings" class="warnings" role="note"></div>
+          <div id="sheets"></div>
+          <p class="template-note">원본 협운해운 회사명·로고·폰트 보존 · 선석/코스터별 시트 · 상단 DATE는 해당 작업의 마지막 HOSE OFF 날짜 · 기존 서명·도장 제외</p>
+          <label class="save-option"><input id="save-history" type="checkbox" /> 생성한 엑셀과 선명·항차를 Supabase 이력에 저장 (선택)</label>
+          <div class="actions"><button id="reset" class="secondary">처음부터</button><button id="download" class="primary">원본 서식 SOF 엑셀 다운로드 <span>↓</span></button></div>
+        </section>
+        <p id="status" role="status" aria-live="polite"></p>
+      </section>
+      <footer>SOF Studio · Statements of Facts, made simple.</footer>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
