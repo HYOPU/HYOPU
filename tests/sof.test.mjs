@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { read, utils } from 'xlsx';
 import { unzipSync,strFromU8 } from 'fflate';
 import { DOMParser,XMLSerializer } from '@xmldom/xmldom';
-import { parseReport,normalizeReport } from '../sof-parser.mjs';
+import { parseReport,normalizeReport,resolveEditedTime } from '../sof-parser.mjs';
 import { exportSof } from '../sof-export.mjs';
 import { importWorkbook } from '../sof-workbook.mjs';
 const fixture=name=>fs.readFileSync(new URL(`fixtures/${name}.txt`,import.meta.url),'utf8');
@@ -57,3 +57,10 @@ test('source content starting with = remains literal text, not a formula',()=>{
  const r=parse('kashi');r.fields.vessel='=WEBSERVICE("https://example.invalid")';const wb=read(exportSof(template,r,{DOMParser,XMLSerializer}),{type:'array'});assert.equal(wb.Sheets.P42.B6.f,undefined);assert.equal(wb.Sheets.P42.B6.t,'s');
 });
 test('empty or malformed inputs show review warnings',()=>{assert.ok(parseReport('').warnings.length);assert.throws(()=>exportSof(template,parseReport(''),{DOMParser,XMLSerializer}));});
+test('edited times preserve month and year and workbook re-import preserves headers',()=>{
+ assert.equal(resolveEditedTime('01/0250','2026-07-01T02:44'),'2026-07-01T02:50');
+ const bytes=exportSof(template,parse('betula'),{DOMParser,XMLSerializer});const original=read(bytes,{type:'array'});
+ const second=read(exportSof(template,importWorkbook(original),{DOMParser,XMLSerializer}),{type:'array'});
+ for(const name of original.SheetNames){assert.equal(second.Sheets[name].N6.v,original.Sheets[name].N6.v);assert.equal(second.Sheets[name].A12.v,original.Sheets[name].A12.v);assert.equal(second.Sheets[name].B35.v,original.Sheets[name].B35.v);}
+});
+test('invalid edited quantities fail explicitly',()=>{const r=parse('kashi');r.groups[0].cargo[0].bl=NaN;assert.throws(()=>exportSof(template,r,{DOMParser,XMLSerializer}),/숫자/);});

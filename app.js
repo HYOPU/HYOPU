@@ -1,5 +1,5 @@
 import { read } from 'xlsx';
-import { parseReport, displayTime } from './sof-parser.mjs';
+import { parseReport, displayTime, resolveEditedTime } from './sof-parser.mjs';
 import { importWorkbook } from './sof-workbook.mjs';
 import { exportSof } from './sof-export.mjs';
 const $=s=>document.querySelector(s);
@@ -60,6 +60,7 @@ $('#review-panel').addEventListener('input',e=>{
   const target=c===undefined?state.groups[g]:state.groups[g].cargo[c];
   let value=key==='remarks'?e.target.value.split('\n').filter(Boolean):e.target.value;
   if(['bl','ship'].includes(key))value=value.trim()===''?null:Number(value.replace(/,/g,''));
+  else if(key!=='remarks')value=resolveEditedTime(value,target[key]||state.groups[g].berthAt);
   target[key]=value;
 });
 $('#sheets').addEventListener('click',e=>{

@@ -25,6 +25,11 @@ function stamp(token, anchor, warnings, line) {
   candidates.sort((a,b)=>Math.abs(+a-base)-Math.abs(+b-base));
   return candidates[0]?.toISOString().slice(0,16)||'';
 }
+// Keep year/month provenance when a review field is edited as DD/HHMM.
+export function resolveEditedTime(value, reference) {
+  if(!/^\d{1,2}\/\d{4}$/.test(value||'')||!/^\d{4}-\d{2}-\d{2}/.test(reference||''))return value;
+  return stamp(value,{year:+reference.slice(0,4),month:+reference.slice(5,7)-1,day:+reference.slice(8,10)},[],0)||value;
+}
 function parseBerth(text) {
   let name=clean(text.replace(/^.*?BERTHED AT\s+(?:\d+\.\s*)?/i,'').split(/\(MAX\s+DRAFT/i)[0]);
   if(/LAYBY BERTH/i.test(name))name=name.match(/\(([^()]+)\)/)?.[1]||name;

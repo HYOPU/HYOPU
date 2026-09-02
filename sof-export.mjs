@@ -49,7 +49,7 @@ export function exportSof(templateBytes,report,xml={DOMParser,XMLSerializer}) {
       const doc=parse(master),name=uniqueName(group.sheetName+(page?` cont ${page+1}`:''),used);
       count++;
       const values={B6:/^M\/T\s/i.test(report.fields.vessel)?report.fields.vessel:`M/T ${report.fields.vessel}`,G6:report.fields.voyage,C7:`ING : ${report.fields.port}${report.fields.port==='ULSAN'?', KOREA':''}`,B7:group.operation,D8:report.fields.charterer,
-        N6:dateSerial(group.leftBerth||group.berthAt),A12:monthLabel(group.arrival),A13:monthLabel(group.pilotIn)!==monthLabel(group.arrival)?monthLabel(group.pilotIn):'',
+        N6:dateSerial(group.leftBerth||group.berthAt)??group.sheetDate??null,A12:monthLabel(group.arrival)||group.arrivalMonth||'',A13:monthLabel(group.pilotIn)!==monthLabel(group.arrival)?monthLabel(group.pilotIn):group.pilotMonth||'',
         B12:displayTime(group.arrival),B13:displayTime(group.pilotIn),B14:displayTime(group.berthAt),G14:group.berth,
         B15:displayTime(group.norTendered)||'REVIEW',B16:displayTime(group.norAccepted)||'REVIEW',B17:displayTime(group.tanksInspected),B18:displayTime(group.tanksAccepted),
         G21:group.operation,I21:group.operation,B32:displayTime(group.cargoCalculationStart),B33:displayTime(group.cargoCalculationEnd),B34:displayTime(group.papersOnBoard),B35:displayTime(group.pilotOut),B36:displayTime(group.leftBerth)};
