@@ -10,7 +10,7 @@ import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 import { read } from 'xlsx';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'sof.html'), 'utf8');
 const fixture = name => fs.readFileSync(new URL(`fixtures/${name}.txt`, import.meta.url), 'utf8');
 const bundle = await build({
   absWorkingDir: root, entryPoints: ['app.js'], bundle: true,

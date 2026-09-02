@@ -1,4 +1,5 @@
 const json = (res, code, body) => res.status(code).json(body);
+const { authorize } = require('../lib/workspace-auth');
 
 module.exports = async function handler(req, res) {
   if (!['GET', 'POST'].includes(req.method)) return json(res, 405, { error: 'Method not allowed' });
@@ -14,6 +15,8 @@ module.exports = async function handler(req, res) {
       return json(res, bucket.ok && table.ok ? 200 : 502, { configured: true, healthy: bucket.ok && table.ok, bucket: 'sof-documents', table: 'sof_documents', storageStatus: bucket.status, databaseStatus: table.status });
     } catch { return json(res, 502, { configured: true, healthy: false, error: 'Supabase connection failed' }); }
   }
+  try { if (!await authorize(req,res,true)) return; }
+  catch { return json(res,502,{saved:false,error:'담당자 인증을 확인하지 못했습니다.'}); }
   const { filename, fileBase64, metadata } = req.body || {};
   if (typeof filename !== 'string' || !/\.xlsx$/i.test(filename) || typeof fileBase64 !== 'string' || !fileBase64) return json(res, 400, { error: 'Missing XLSX document' });
   if (fileBase64.length > 4 * 1024 * 1024) return json(res, 413, { error: 'Document too large' });

@@ -1,55 +1,41 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="운항 보고서에서 Statement of Facts를 생성합니다." />
-    <title>SOF Studio</title>
-    <link rel="stylesheet" href="./styles.css" />
-    <link rel="stylesheet" href="./template.css" />
-  </head>
-  <body>
-    <main class="shell">
-      <header class="topbar">
-        <a class="brand" href="/" aria-label="SOF Studio 홈"><span class="brand-mark">S</span> SOF Studio</a>
-        <span class="secure"><span class="dot"></span> 브라우저 내 변환</span>
-      </header>
-
-      <section class="hero">
-        <p class="eyebrow">MARITIME DOCUMENT AUTOMATION</p>
-        <h1>리포트에서 신뢰할 수 있는<br /><em>SOF를 만듭니다.</em></h1>
-        <p class="lede">운항 리포트 또는 Time Sheet를 올리면 항차별 Statement of Facts를 정리하고, 검토 가능한 엑셀 파일로 바로 내보냅니다.</p>
-      </section>
-
-      <section class="workspace" aria-label="SOF 생성 작업공간">
-        <div class="stepper" aria-label="진행 상태"><span class="active">01 업로드</span><i></i><span>02 검토</span><i></i><span>03 내보내기</span></div>
-        <div id="upload-panel" class="upload-panel">
-          <label id="dropzone" class="dropzone" for="report-file">
-            <input id="report-file" type="file" accept=".xlsx,.xls,.csv,.txt" hidden />
-            <span class="upload-icon">↑</span>
-            <strong>운항 리포트 또는 Time Sheet 업로드</strong>
-            <small>XLSX, XLS, CSV 또는 TXT · 최대 20MB</small>
-            <span class="choose">파일 선택</span>
-          </label>
-          <div class="hint"><strong>지원하는 정보</strong><span>입출항 · NOR · 접안 · 화물 작업 · Pilot · 출항 · 화물/탱크 정보</span></div>
-          <label class="report-input-label" for="report-text">또는 이메일 리포트 붙여넣기</label>
-          <textarea id="report-text" rows="12" placeholder="선명 / 항차 / ULSAN / DEP.REPORT&#10;AUG' 2026&#10;26/1100 : EOSP"></textarea>
-          <button id="parse-text" class="primary paste-button">리포트 분석</button>
-        </div>
-
-        <section id="review-panel" class="review-panel hidden" aria-live="polite">
-          <div class="review-head"><div><p class="eyebrow">READY FOR REVIEW</p><h2 id="file-name">리포트</h2><p id="sheet-count"></p></div><div class="review-tools"><button id="edit-report" class="text-button">리포트 수정</button><button id="replace-file" class="text-button">다른 파일 선택</button></div></div>
-          <div class="summary-grid" id="summary-grid"></div>
-          <div id="warnings" class="warnings" role="note"></div>
-          <div id="sheets"></div>
-          <p class="template-note">원본 협운해운 회사명·로고·폰트 보존 · 선석/코스터별 시트 · 상단 DATE는 해당 작업의 마지막 HOSE OFF 날짜 · 기존 서명·도장 제외</p>
-          <label class="save-option"><input id="save-history" type="checkbox" /> 생성한 엑셀과 선명·항차를 Supabase 이력에 저장 (선택)</label>
-          <div class="actions"><button id="reset" class="secondary">처음부터</button><button id="download" class="primary">원본 서식 SOF 엑셀 다운로드 <span>↓</span></button></div>
-        </section>
-        <p id="status" role="status" aria-live="polite"></p>
-      </section>
-      <footer>SOF Studio · Statements of Facts, made simple.</footer>
-    </main>
-    <script type="module" src="./app.js"></script>
-  </body>
-</html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HYOPU · Vessel Operations</title>
+<meta name="description" content="HYOPU 선박 업무 공간. Korea ETA, 월간 캘린더, 담당자별 입출항 관리와 SOF 자동화.">
+<meta name="theme-color" content="#101820"><link rel="stylesheet" href="/dashboard.css">
+<meta property="og:title" content="HYOPU · Marine Operations"><meta property="og:description" content="선박 입출항 일정, 담당자별 업무, SOF 자동화를 한곳에서.">
+<meta property="og:image" content="https://sof-studio-five.vercel.app/og.png"><meta property="og:url" content="https://sof-studio-five.vercel.app/"><meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="HYOPU · Marine Operations"><meta name="twitter:description" content="선박 입출항 일정, 담당자별 업무, SOF 자동화를 한곳에서."><meta name="twitter:image" content="https://sof-studio-five.vercel.app/og.png">
+</head>
+<body>
+<aside class="sidebar">
+<a href="/" class="brand" aria-label="HYOPU 홈"><span class="brand-symbol">H<span>↗</span></span><span>HYOPU<small>MARINE OPERATIONS</small></span></a>
+<div class="workspace-label"><span class="live-dot"></span>KOREA WORKSPACE</div>
+<nav aria-label="주 메뉴">
+<button data-view="calendar" class="nav-item active"><span>▦</span>운항 캘린더<small>CALENDAR</small></button>
+<button data-view="list" class="nav-item"><span>☷</span>ETA 리스트<small>KOREA ETA</small></button>
+<button data-view="tasks" class="nav-item"><span>☑</span>업무 체크리스트<small>TO DO</small></button>
+<a href="/sof.html" class="nav-item"><span>↗</span>SOF 자동화<small>DOCUMENTS</small></a>
+</nav>
+<div class="sidebar-bottom"><span class="avatar">HW</span><div>HYOP WOON<small>Shipping operations</small></div></div>
+</aside>
+<main class="main">
+<header class="topbar"><div class="breadcrumb">WORKSPACE <span>/</span> <b id="breadcrumb">운항 캘린더</b></div><div class="topbar-right"><span class="timezone">ALL TIMES IN KOREA · LT</span><button id="account-button" class="subtle">팀 로그인</button></div></header>
+<section class="page-head"><div><p class="eyebrow">KOREA PORT OPERATIONS</p><h1 id="page-title">선박 운항 캘린더<span class="title-dot">.</span></h1><p class="description">입항부터 출항까지, 담당 선박의 모든 업무를 한곳에서.</p></div><button id="new-call" class="primary">＋ 선박 일정 추가</button></section>
+<div id="connection-banner" class="connection-banner" role="status">공유 저장 연결 확인 중…</div>
+<section id="metrics" class="metrics" aria-label="현재 조회 현황"></section>
+<section class="board" aria-label="선박 일정">
+<div class="board-toolbar"><div class="month-controls"><button id="previous-month" class="icon-button" aria-label="이전 달">‹</button><h2 id="month-title"></h2><button id="next-month" class="icon-button" aria-label="다음 달">›</button><button id="today" class="subtle">오늘</button></div><div class="filters"><label class="search"><span>⌕</span><input id="search" type="search" placeholder="선박명 · 항차 검색" aria-label="선박명 또는 항차 검색"></label><label class="filter-label">PORT<select id="port-filter" aria-label="항만 선택"><option value="">전체 항만</option></select></label><label class="filter-label pic-filter">PIC<select id="pic-filter" aria-label="담당자 PIC 선택"><option value="">전체 담당자</option></select></label></div></div>
+<div class="board-subbar"><div id="view-switch" class="segmented"><button data-view="calendar" class="active">▦ 월간 캘린더</button><button data-view="list">☷ ETA 리스트</button></div><span id="result-label"></span></div>
+<div id="board-content"></div>
+<footer class="board-footer"><span><i class="legend green"></i>IN PORT <i class="legend blue"></i>PRE-ARRIVAL <i class="legend amber"></i>일정 확인 필요</span><span>날짜·시각 미확정 표기는 원문 기준</span></footer>
+</section>
+<footer class="page-footer"><span>HYOPU · A clearer view of every port call.</span><span id="source-label">SOURCE · KOREA ETA UPDATE / 2026</span></footer>
+</main>
+<dialog id="vessel-dialog" class="vessel-dialog"></dialog>
+<dialog id="login-dialog" class="login-dialog"><form id="login-form"><p class="eyebrow">HYOPU TEAM</p><h2>팀 업무 공간 로그인</h2><p>승인된 담당자 계정으로 선박 업무를 함께 관리합니다.</p><label>이메일<input name="email" type="email" autocomplete="username" required></label><label>비밀번호<input name="password" type="password" autocomplete="current-password" required></label><p id="login-status" role="status"></p><div class="form-actions"><button type="button" id="login-close" class="subtle">닫기</button><button class="primary">로그인</button></div></form></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+<script type="module" src="/dashboard.js"></script>
+</body></html>
