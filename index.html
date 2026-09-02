@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="운항 보고서에서 Statement of Facts를 생성합니다." />
     <title>SOF Studio</title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./template.css" />
   </head>
@@ -39,21 +38,18 @@
         </div>
 
         <section id="review-panel" class="review-panel hidden" aria-live="polite">
-          <div class="review-head"><div><p class="eyebrow">READY FOR REVIEW</p><h2 id="file-name">리포트</h2></div><button id="replace-file" class="text-button">다른 파일 선택</button></div>
+          <div class="review-head"><div><p class="eyebrow">READY FOR REVIEW</p><h2 id="file-name">리포트</h2><p id="sheet-count"></p></div><div class="review-tools"><button id="edit-report" class="text-button">리포트 수정</button><button id="replace-file" class="text-button">다른 파일 선택</button></div></div>
           <div class="summary-grid" id="summary-grid"></div>
-          <div class="section-heading"><div><p class="eyebrow">TIMELINE</p><h2>Statement</h2></div><button id="add-row" class="secondary">+ 항목 추가</button></div>
-          <div class="table-wrap"><table><thead><tr><th>DATE / HOUR</th><th>STATEMENT</th><th></th></tr></thead><tbody id="statement-rows"></tbody></table></div>
-          <div class="section-heading cargo-heading"><div><p class="eyebrow">CARGO DETAILS</p><h2>화물 정보</h2></div></div>
-          <div class="table-wrap"><table><thead><tr><th>BERTH</th><th>CARGO</th><th>SHIPPER / CONSIGNEE</th><th>TANK NO.</th><th>LINE NO.</th><th>HOSE ON</th><th>COMM.</th><th>COMP.</th><th>HOSE OFF</th><th>B/L FIG M/T</th><th>SHIP FIG M/T</th></tr></thead><tbody id="cargo-rows"></tbody></table></div>
-          <p class="template-note">원본 협운해운 TIME SHEET 서식으로 생성 · 선석당 시트 1장 · 상단 DATE는 해당 선석의 마지막 HOSE OFF 날짜</p>
+          <div id="warnings" class="warnings" role="note"></div>
+          <div id="sheets"></div>
+          <p class="template-note">원본 협운해운 회사명·로고·폰트 보존 · 선석/코스터별 시트 · 상단 DATE는 해당 작업의 마지막 HOSE OFF 날짜 · 기존 서명·도장 제외</p>
+          <label class="save-option"><input id="save-history" type="checkbox" /> 생성한 엑셀과 선명·항차를 Supabase 이력에 저장 (선택)</label>
           <div class="actions"><button id="reset" class="secondary">처음부터</button><button id="download" class="primary">원본 서식 SOF 엑셀 다운로드 <span>↓</span></button></div>
         </section>
+        <p id="status" role="status" aria-live="polite"></p>
       </section>
       <footer>SOF Studio · Statements of Facts, made simple.</footer>
     </main>
-    <template id="summary-template"><label><span></span><input /></label></template>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
-    <script src="./app.js"></script>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>

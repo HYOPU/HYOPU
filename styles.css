@@ -16,3 +16,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .sof-sheet td:nth-child(3) input { min-width: 140px; }
 #report-text { margin-bottom: 16px; }
 #status { white-space: pre-line; }
+.review-tools { display: flex; flex-wrap: wrap; gap: 12px; }
+.summary-grid select { width: 100%; padding: 6px; border: 1px solid #bdc8c5; background: white; color: var(--ink); }
+#status:not(:empty) { padding-top: 16px; border-top: 1px solid var(--line); }
+.sof-sheet .table-wrap:focus-within { outline: 1px solid #a6c3c0; }
+@media(max-width:650px) { .review-head { align-items: start; gap: 16px; flex-direction: column; } .actions { gap: 12px; align-items: stretch; } }

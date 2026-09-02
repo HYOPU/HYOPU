@@ -36,7 +36,10 @@ function parseBerth(text) {
   return name;
 }
 const sheetName = value => value.replace(/#/g,'').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31)||'SOF';
-const number = value => value ? Number(value.replace(/,/g,'').replace(/MT$/i,'')) : null;
+const number = value => {
+  const amount=clean(value).replace(/,/g,'').replace(/\s*M\s*\/?\s*T$/i,'').trim();
+  return amount ? Number(amount) : null;
+};
 export function parseReport(input) {
   const lines=normalizeReport(input).split('\n').map(clean).filter(Boolean);
   const warnings=[];
@@ -68,14 +71,19 @@ export function parseReport(input) {
       if(timeMatches.length>=4){
         name=clean(rest.slice(0,timeMatches[0].index).replace(/\/\s*$/,''));
         times=timeMatches.slice(0,4).map(x=>getStamp(x[0],sourceLine));
-        const tail=rest.slice(timeMatches[3].index+timeMatches[3][0].length).trim().split(/\s+/);
+        let tail=rest.slice(timeMatches[3].index+timeMatches[3][0].length).trim();
         const figures=[];
-        while(tail.length&&/^\d[\d,]*(?:\.\d+)?(?:MT)?$/i.test(tail[0]))figures.push(number(tail.shift()));
-        [bl,ship]=figures; tank=tail.join('');
+        for(let match;figures.length<2&&(match=tail.match(/^(\d[\d,]*(?:\.\d+)?)(?:\s*M\s*\/?\s*T)?(?=\s|$)/i));){
+          figures.push(number(match[1]));tail=tail.slice(match[0].length).trim();
+        }
+        [bl,ship]=figures; tank=tail.replace(/\s+/g,'');
       }else{
-        const detail=rest.match(/^(.*?)\s*\/\s*([\d,.]+)\s*MT\s*\(([^)]*)\)(.*)$/i);
+        const detail=rest.match(/^(.*?)\s*\/\s*([\d,.]+)\s*M\s*\/?\s*T\s*\(([^)]*)\)(.*)$/i);
         if(!detail){warnings.push(`행 ${sourceLine}: 화물 #${cargoMatch[1]} 형식을 확인해 주세요.`);continue;}
         [,name,,tank,details]=detail;plannedQuantity=number(detail[2]);
+        // Discharge report headers state B/L quantity. SHIP FIG is a separate
+        // measurement and must remain empty unless the report supplies it.
+        if(operation==='DISCH')bl=plannedQuantity;
       }
       currentCargo={id:`cargo-${nextId++}`,number:cargoMatch[1],name:clean(name),operation:operation||'LOAD',tank,party:'',line:'',plannedQuantity,
         hoseOn:times[0]||'',commenced:times[1]||'',completed:times[2]||'',hoseOff:times[3]||'',bl:bl??null,ship:ship??null,
@@ -86,8 +94,8 @@ export function parseReport(input) {
       for(const m of line.matchAll(/\b(H\/ON|COMM|COMP|H\/OFF)\s+(\d{1,2}\/\d{4})/gi)) currentCargo[({'H/ON':'hoseOn',COMM:'commenced',COMP:'completed','H/OFF':'hoseOff'})[m[1].toUpperCase()]]=getStamp(m[2],sourceLine);
       continue;
     }
-    const fig=line.match(/^\*?(B\/L FIG|SHIP FIG|STOWAGE|STOWGAE)\s*:\s*(.+)/i);
-    if(fig&&currentCargo){const key=fig[1].toUpperCase();if(key.startsWith('B/'))currentCargo.bl=number(fig[2]);else if(key.startsWith('SHIP'))currentCargo.ship=number(fig[2]);else currentCargo.tank=clean(fig[2]);continue;}
+    const fig=line.match(/^\*?\s*(B\s*\/\s*L\s+FIG|SHIP\s+FIG|STOWAGE|STOWGAE)(?:\s*\(?\s*M\s*\/?\s*T\s*\)?)?\s*[:：]\s*(.+)$/i);
+    if(fig&&currentCargo){const key=fig[1].replace(/\s+/g,'').toUpperCase();if(key.startsWith('B/'))currentCargo.bl=number(fig[2]);else if(key.startsWith('SHIP'))currentCargo.ship=number(fig[2]);else currentCargo.tank=clean(fig[2]);continue;}
     let m=line.match(/^\*?(\d{1,2}\/\d{4})(?:\s*[~～–]\s*(\d{1,2}\/\d{4}))?\s*:\s*(.+)$/);
     const inherited=line.match(/^(\d{4})\s*:\s*(.+)$/);
     if(!m&&inherited&&anchor)m=[line,`${pad(anchor.day)}/${inherited[1]}`,undefined,inherited[2]];

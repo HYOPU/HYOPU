@@ -26,7 +26,10 @@ export function importWorkbook(workbook) {
     }
     const remarkRow=rows.findIndex(r=>/REMARK/.test(text(r[0])));
     if(remarkRow>=0)for(let i=remarkRow;i<rows.length;i++){if(/SHORE REPRESENTATIVE/.test(text(rows[i][0])))break;const remark=text(rows[i][1]);if(remark)group.remarks.push(remark);}
-    if(group.cargo.length)result.groups.push(group);
+    // Overflow remarks can have their own printed sheet without cargo rows.
+    // Retain that sheet by its actual name; never infer shared berth identity
+    // from a "cont" suffix or drop its remarks on upload/download round trips.
+    if(group.cargo.length||group.remarks.length)result.groups.push(group);
     for(const key of ['arrival','pilotIn','berthAt','norTendered','norAccepted','tanksInspected','tanksAccepted','pilotOut','leftBerth','cargoCalculationStart','cargoCalculationEnd','papersOnBoard']){
       const label=key==='arrival'?group.arrivalMonth:key==='pilotIn'?group.pilotMonth:'';
       const m=label.match(/(20\d{2}),?\s*(\w{3})/);

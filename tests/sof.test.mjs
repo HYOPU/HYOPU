@@ -26,7 +26,7 @@ test('LARIX: eight sheets, ten cargoes, three distinct coasters at one berth',()
  const r=parse('larix');assert.equal(r.fields.voyage,'AG-NE 72');assert.equal(r.groups.length,8);assert.equal(r.cargo.length,10);
  assert.deepEqual(r.groups.map(g=>g.sheetName),['P63','JSTT SP5','OCEAN ACE 11','YUE DAN','WOORI HANA','UTT','SK3','P22']);
  const [first,second,ace,yue,woori,utt,sk,p22]=r.groups;
- assert.equal(first.operation,'DISCH');assert.equal(second.operation,'DISCH');assert.equal(first.cargo[0].bl,null);assert.equal(first.cargo[0].ship,null);assert.equal(first.cargo[0].plannedQuantity,5000);
+ assert.equal(first.operation,'DISCH');assert.equal(second.operation,'DISCH');assert.equal(first.cargo[0].bl,5000);assert.equal(second.cargo[0].bl,5000);assert.equal(first.cargo[0].ship,null);assert.equal(first.cargo[0].plannedQuantity,5000);
  assert.ok(second.remarks.some(x=>x.includes('19/1900~19/2130')&&x.includes('CGO#117')));assert.ok(!first.remarks.some(x=>x.includes('CGO#117')));
  for(const g of [ace,yue,woori]){assert.equal(g.berth,'SBTS#1');assert.equal(g.arrival,'2026-03-23T06:20');assert.equal(g.pilotOut,'2026-03-25T16:35');assert.equal(g.leftBerth,'2026-03-25T17:02');}
  assert.equal(ace.tanksInspected,'ATIP');assert.equal(yue.tanksInspected,'2026-03-24T09:10');assert.equal(woori.tanksInspected,'2026-03-25T05:10');assert.equal(woori.cargo[0].tank,'3P');
@@ -45,9 +45,12 @@ for(const name of ['betula','kashi','larix'])test(`${name}: XLSX round trip, lay
  for(let i=0;i<report.groups.length;i++){
   const s=wb.Sheets[wb.SheetNames[i]],g=report.groups[i];assert.equal(s.B6.v,`M/T ${report.fields.vessel}`);assert.equal(s.G6.v,report.fields.voyage);assert.equal(s.G14.v,g.berth);assert.equal(s.G21.v,g.operation);assert.equal(s.B16.v,'REVIEW');assert.ok(s['!merges'].some(m=>utils.encode_range(m)==='A2:P3'));
   g.cargo.forEach((c,j)=>{const row=22+j*2;assert.equal(s[`A${row}`].v,Number(c.number));assert.equal(s[`A${row+1}`].v,c.name);assert.equal(s[`N${row}`]?.v??null,c.bl);if(c.bl!==null)assert.equal(s[`N${row}`].t,'n');});
-  assert.match(strFromU8(zip[`xl/worksheets/sheet${i+1}.xml`]),/fitToWidth="1"/);
+  assert.match(strFromU8(zip[`xl/worksheets/sheet${i+1}.xml`]),/fitToPage="1"/);
+  assert.ok(zip[`xl/worksheets/_rels/sheet${i+1}.xml.rels`]);
+  assert.equal(s.A2.v.trim(),'HYOP WOON SHIPPING LTD.');assert.equal(s.O20.v,'SHIP');assert.equal(s.O21.v,'FIG M/T');
  }
- assert.ok(!Object.keys(zip).some(x=>/media|drawing|vbaProject|externalLink/i.test(x)));assert.equal(importWorkbook(wb).groups.length,report.groups.length);
+ assert.deepEqual(Object.keys(zip).filter(x=>/^xl\/media\//.test(x)),['xl/media/image1.png']);
+ assert.ok(!Object.keys(zip).some(x=>/vbaProject|externalLink/i.test(x)));assert.equal(importWorkbook(wb).groups.length,report.groups.length);
 });
 test('overflow cargoes and remarks continue without truncation or name collisions',()=>{
  const r=parse('kashi');r.groups[0].cargo=Array.from({length:7},(_,i)=>({...r.groups[0].cargo[0],number:String(600+i)}));r.groups[0].remarks=Array.from({length:19},(_,i)=>`Remark ${i}`);
