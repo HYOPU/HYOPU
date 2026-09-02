@@ -5,6 +5,10 @@ import { exportSof } from './sof-export.mjs';
 
 const $ = selector => document.querySelector(selector);
 let state = null;
+let workspaceContext = null;
+function publishSof() {
+  if (workspaceContext && typeof window !== 'undefined') window.parent.postMessage({type:'hyopu:sof-state',callId:workspaceContext.callId,report:state,raw:$('#report-text').value},location.origin);
+}
 const esc = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 const fields = [['vessel', 'VESSEL'], ['voyage', 'VOYAGE'], ['port', 'PORT'], ['charterer', 'CHARTERER']];
 const facts = [
@@ -49,6 +53,7 @@ function render() {
     <button class="secondary add-cargo" data-add="${index}">+ 화물 추가</button>
     <label class="remarks-label">REMARKS (한 줄에 한 항목)<textarea data-g="${index}" data-key="remarks" rows="${Math.min(12, Math.max(3, group.remarks.length + 1))}">${esc(group.remarks.join('\n'))}</textarea></label>
   </article>`).join('');
+  publishSof();
 }
 
 // Updating only dependent fields keeps the user's cursor in the HOSE OFF input.
@@ -68,8 +73,10 @@ function refreshNorFields() {
 async function readFile(file) {
   if (file.size > 20 * 1024 * 1024) { status('20MB 이하의 파일을 올려 주세요.'); return; }
   try {
+    const raw = /\.txt$/i.test(file.name) ? await file.text() : '';
+    $('#report-text').value = raw;
     const report = /\.txt$/i.test(file.name)
-      ? parseReport(await file.text())
+      ? parseReport(raw)
       : importWorkbook(read(await file.arrayBuffer(), { type: 'array', cellDates: false, sheetRows: 10000 }));
     showReport(report, file.name);
   } catch (error) {
@@ -138,7 +145,7 @@ $('#replace-file').onclick = () => $('#report-file').click();
 $('#edit-report').onclick = () => { $('#upload-panel').classList.remove('hidden'); $('#review-panel').classList.add('hidden'); status('리포트를 수정한 뒤 다시 분석해 주세요.'); };
 $('#review-panel').addEventListener('input', event => {
   const { field, g, c, key } = event.target.dataset;
-  if (field) { state.fields[field] = event.target.value; return; }
+  if (field) { state.fields[field] = event.target.value; publishSof(); return; }
   if (g === undefined || !key) return;
   const target = c === undefined ? state.groups[g] : state.groups[g].cargo[c];
   if (key === 'norTendered' && target.norTenderedAuto) { refreshNorFields(); return; }
@@ -147,6 +154,7 @@ $('#review-panel').addEventListener('input', event => {
   else if (timeFields.has(key)) value = resolveEditedTime(value, target[key] || state.groups[g].berthAt);
   target[key] = value;
   if (key === 'hoseOff' || key === 'norTendered' || key === 'berthAt') refreshNorFields();
+  publishSof();
 });
 $('#sheets').addEventListener('click', event => {
   const { add, remove, g } = event.target.dataset;
@@ -158,4 +166,22 @@ $('#sheets').addEventListener('click', event => {
   if (remove !== undefined) { state.groups[g].cargo.splice(Number(remove), 1); applyNorTenderedRule(state); render(); }
 });
 $('#download').onclick = download;
-$('#reset').onclick = () => location.reload();
+$('#reset').onclick = () => {
+  if(!workspaceContext){location.reload();return;}
+  state=null;$('#upload-panel').classList.remove('hidden');$('#review-panel').classList.add('hidden');status('새 리포트를 분석해 주세요.');publishSof();
+};
+// Same-origin, per-port-call bridge. No cross-window/global report storage.
+if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+  document.body.classList.add('embedded-sof');
+  $('#report-text').addEventListener('input',()=>{if(workspaceContext)window.parent.postMessage({type:'hyopu:sof-raw',callId:workspaceContext.callId,raw:$('#report-text').value},location.origin);});
+  window.addEventListener('message', event => {
+    if(event.origin!==location.origin||event.source!==window.parent||event.data?.type!=='hyopu:sof-context')return;
+    workspaceContext={callId:event.data.callId};
+    const context=event.data.fields||{};
+    const heading=document.querySelector('.hero .lede');
+    if(heading)heading.textContent=`${context.vessel||''} / ${context.voyage||''} / ${context.port||''} · 현재 입항 건의 SOF 작업`;
+    if(typeof event.data.raw==='string')$('#report-text').value=event.data.raw;
+    if(event.data.report)showReport(event.data.report,'저장된 선박 SOF');
+  });
+  window.parent.postMessage({type:'hyopu:sof-ready'},location.origin);
+}

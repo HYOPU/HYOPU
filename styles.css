@@ -21,3 +21,10 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 #status:not(:empty) { padding-top: 16px; border-top: 1px solid var(--line); }
 .sof-sheet .table-wrap:focus-within { outline: 1px solid #a6c3c0; }
 @media(max-width:650px) { .review-head { align-items: start; gap: 16px; flex-direction: column; } .actions { gap: 12px; align-items: stretch; } }
+:root .embedded-sof .shell{max-width:none;margin:0;padding:16px}
+:root .embedded-sof .topbar,:root .embedded-sof footer,:root .embedded-sof .save-option{display:none}
+:root .embedded-sof .hero{padding:10px 0 18px}
+:root .embedded-sof .hero h1{font-size:23px;line-height:1.3}
+:root .embedded-sof .hero .eyebrow{display:none}
+:root .embedded-sof .lede{font-size:12px;margin-top:8px;max-width:none}
+:root .embedded-sof .workspace{padding:16px}
