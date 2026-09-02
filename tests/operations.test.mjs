@@ -34,6 +34,19 @@ test('all reference calls and genuine parser snapshots pass server validation',(
   for(const call of calls)assert.equal(validation.validateCall(call),null);
   for(const name of ['betula','kashi','larix']){const report=parseReport(fs.readFileSync(new URL(`fixtures/${name}.txt`,import.meta.url),'utf8'));assert.ok(validation.validSof(report),name);}
 });
+test('INPORT with unknown ETD remains visible through today without inventing future dates',()=>{
+  const call={...calls[0],etaRaw:'08/30',etdRaw:'',status:'INPORT'};
+  assert.equal(callsOnDay([call],'2026-09-03','2026-09-03').length,1);
+  assert.equal(callsOnDay([call],'2026-09-04','2026-09-03').length,0);
+  assert.equal(inMonth(call,'2026-09','2026-09-03'),true);
+  assert.equal(inMonth(call,'2026-10','2026-09-03'),false);
+});
+test('editing vessel identity cannot save or import a mismatched old SOF',()=>{
+  const sof=parseReport(fs.readFileSync(new URL('fixtures/kashi.txt',import.meta.url),'utf8'));
+  const call={...calls[0],vessel:sof.fields.vessel,voyage:sof.fields.voyage,port:sof.fields.port,sof};
+  assert.equal(validation.validateCall(call),null);
+  for(const patch of [{vessel:'OTHER'},{voyage:'OTHER'},{port:'YOSU'}]){assert.equal(validation.sofMatchesCall(sof,{...call,...patch}),false);assert.match(validation.validateCall({...call,...patch}),/선박·항차·항만/);}
+});
 test('malformed highlights, report shapes, ETA values and nested rows are rejected',()=>{
   for(const patch of [{highlight:{}},{sof:{fields:'broken',groups:[{}],warnings:[]}},{etaRaw:'02/30'},{etaRaw:'09/01 2560'},{tasks:[{done:'true',text:'x',due:''}]},{activities:new Array(201).fill({})}])assert.ok(validation.validateCall({...calls[0],...patch}));
 });

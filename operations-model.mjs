@@ -25,14 +25,15 @@ export function shiftMonth(month, offset) { const day = new Date(`${month}-01T00
 export function matchesFilters(call, { pic = '', port = '', query = '' } = {}) {
   return (!pic || call.pic === pic) && (!port || call.port === port) && (!query || `${call.vessel} ${call.voyage}`.toLowerCase().includes(query.toLowerCase()));
 }
-export function callsOnDay(calls, day) {
+const koreaToday = () => new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+export function callsOnDay(calls, day, today = koreaToday()) {
   return calls.filter(call => {
     const eta = parseEta(call.etaRaw, call.year).date, etd = parseEta(call.etdRaw, call.year).date;
-    return eta === day || Boolean(call.status === 'INPORT' && eta && eta < day && etd && day <= etd);
+    return eta === day || Boolean(call.status === 'INPORT' && eta && eta < day && day <= (etd || today));
   });
 }
-export function inMonth(call, month) {
+export function inMonth(call, month, today = koreaToday()) {
   const eta = parseEta(call.etaRaw, call.year).date, etd = parseEta(call.etdRaw, call.year).date;
-  return eta.startsWith(month) || Boolean(call.status === 'INPORT' && eta && eta < `${month}-01` && etd >= `${month}-01`);
+  return eta.startsWith(month) || Boolean(call.status === 'INPORT' && eta && eta < `${month}-01` && (etd || today) >= `${month}-01`);
 }
 export function blankCall(id) { return { ...hydrateSeed([{ vessel: '', voyage: '', port: 'ULSAN', etaRaw: '', etdRaw: '', pic: '', remark: '' }])[0], id, year: new Date().getFullYear() }; }
