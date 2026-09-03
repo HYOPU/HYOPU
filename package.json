@@ -5,7 +5,9 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test tests/*.test.mjs",
-    "dev": "node scripts/dev.mjs"
+    "dev": "node scripts/dev.mjs",
+    "eta:sync": "node scripts/eta-local-sync.mjs --once",
+    "eta:watch": "node scripts/eta-local-sync.mjs --watch"
   },
   "dependencies": { "fflate": "0.8.2", "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz" },
   "devDependencies": { "@xmldom/xmldom": "0.9.12", "esbuild": "0.25.10" }
