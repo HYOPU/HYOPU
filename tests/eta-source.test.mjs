@@ -27,11 +27,12 @@ test('Excel clipboard table uses the same ETA parser without a saved workbook', 
 
 test('Power Automate ETA updates preserve vessel workspace details', () => {
   const [row] = etaSource.parseEtaRows(rows);
-  const existing = { id: 'eta-2026-001', year: 2026, notes: 'Keep this', activityNotes: 'Agent called', vcrFileName: '', latestReport: '', reportType: 'DEP.REPORT', reportReceived: '', reportChecked: false, activities: [], cargo: [], crew: [], tasks: [], sof: null, highlight: ['vessel'] };
+  const existing = { id: 'eta-2026-001', year: 2026, notes: 'Keep this', activityNotes: 'Agent called', proformaNotes: 'Keep draft limit', vcrFileName: '', latestReport: '', reportType: 'DEP.REPORT', reportReceived: '', reportChecked: false, activities: [], cargo: [], crew: [], tasks: [], sof: null, highlight: ['vessel'] };
   const call = etaSource.callFromEta(row, existing, existing.id);
   assert.equal(call.etdRaw, '09/03 2000');
   assert.equal(call.status, 'INPORT');
   assert.equal(call.notes, 'Keep this');
+  assert.equal(call.proformaNotes, 'Keep draft limit');
   assert.deepEqual(call.highlight, ['vessel']);
 });
 

@@ -12,7 +12,7 @@ export function parseEta(raw, year = 2026) {
   return { date: stamp.toISOString().slice(0, 10), time: /^\d/.test(clock) && !invalidTime ? `${clock.slice(0, 2)}:${clock.slice(2)}` : '', period: /AM|PM/i.test(clock) ? clock.toUpperCase() : '', uncertain: Boolean(match[4] || invalidTime) };
 }
 export function hydrateSeed(rows) {
-  return rows.map((row, i) => ({ ...row, id: `eta-2026-${String(i + 1).padStart(3, '0')}`, year: 2026, status: row.remark === 'INPORT' ? 'INPORT' : 'PRE-ARRIVAL', activities: [], activityNotes: '', cargo: [], crew: [], tasks: [], notes: '', vcrFileName: '', latestReport: '', reportType: 'DEP.REPORT', reportReceived: '', reportChecked: false, sof: null, revision: 0 }));
+  return rows.map((row, i) => ({ ...row, id: `eta-2026-${String(i + 1).padStart(3, '0')}`, year: 2026, status: row.remark === 'INPORT' ? 'INPORT' : 'PRE-ARRIVAL', activities: [], activityNotes: '', cargo: [], crew: [], tasks: [], notes: '', proformaNotes: '', vcrFileName: '', latestReport: '', reportType: 'DEP.REPORT', reportReceived: '', reportChecked: false, sof: null, revision: 0 }));
 }
 export function calendarDays(month) {
   const first = new Date(`${month}-01T00:00:00Z`), start = new Date(first);
