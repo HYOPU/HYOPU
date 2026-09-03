@@ -74,6 +74,23 @@ async function importEtaWorkbook(file) {
     control.value = '';
   }
 }
+async function importEtaClipboard() {
+  const input = $('#eta-paste-text');
+  const text = input.value;
+  if (!text.trim()) throw new Error('Excel에서 복사한 ETA 표를 붙여넣어 주세요.');
+  const submit = $('#eta-paste-import');
+  submit.disabled = true;
+  try {
+    showToast('붙여넣은 ETA 표를 확인하고 공유 일정에 반영하는 중입니다…');
+    const result = await api('/api/eta-paste', { method: 'POST', body: JSON.stringify({ text }) });
+    await loadCalls();
+    $('#eta-paste-dialog').close();
+    input.value = '';
+    showToast(`ETA 반영 완료 · 원본 ${result.sourceRows ?? 0}건 / 변경 ${result.changed ?? 0}건`);
+  } finally {
+    submit.disabled = false;
+  }
+}
 function connectionStatus() {
   const banner=$('#connection-banner');
   banner.classList.toggle('good',Boolean(session.ready));
@@ -90,6 +107,8 @@ const workspace=createVesselWorkspace({
 function openCall(id) { workspace.open(id); }
 $('#new-call').onclick=()=>workspace.open();
 $('#eta-upload-file').onchange=event=>importEtaWorkbook(event.target.files?.[0]).catch(error=>showToast(error.message));
+$('#eta-paste-open').onclick=()=>$('#eta-paste-dialog').showModal();
+$('#eta-paste-import').onclick=()=>importEtaClipboard().catch(error=>showToast(error.message));
 let toastTimer;
 function showToast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{$('#toast').hidden=true;},5000);}
 render();

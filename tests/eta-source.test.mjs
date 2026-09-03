@@ -18,6 +18,13 @@ test('SharePoint ETA sheet parses canonical source rows only', () => {
   ]);
 });
 
+test('Excel clipboard table uses the same ETA parser without a saved workbook', () => {
+  const pasted = `KOREA ETA UPDATE\r\nVessel\tVoy\tPort\tETA/Arrived\tRemark\tETD\tPIC\r\nS.PONDO\tPACS 116 + HBR 117\tULSAN\t08/21 0618\tINPORT\t09/03 2000\tDENNIS`;
+  assert.deepEqual(etaSource.parseEtaClipboard(pasted), [
+    { vessel: 'S.PONDO', voyage: 'PACS 116 + HBR 117', port: 'ULSAN', etaRaw: '08/21 0618', remark: 'INPORT', etdRaw: '09/03 2000', pic: 'DENNIS' },
+  ]);
+});
+
 test('Power Automate ETA updates preserve vessel workspace details', () => {
   const [row] = etaSource.parseEtaRows(rows);
   const existing = { id: 'eta-2026-001', year: 2026, notes: 'Keep this', activityNotes: 'Agent called', vcrFileName: '', latestReport: '', reportType: 'DEP.REPORT', reportReceived: '', reportChecked: false, activities: [], cargo: [], crew: [], tasks: [], sof: null, highlight: ['vessel'] };

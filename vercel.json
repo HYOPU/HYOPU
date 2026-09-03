@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": { "api/documents.js": { "maxDuration": 30 }, "api/workspace.js": { "maxDuration": 30 }, "api/port-calls.js": { "maxDuration": 30 }, "api/eta-import.js": { "maxDuration": 30 }, "api/eta-upload.js": { "maxDuration": 30 } },
+  "functions": { "api/documents.js": { "maxDuration": 30 }, "api/workspace.js": { "maxDuration": 30 }, "api/port-calls.js": { "maxDuration": 30 }, "api/eta-import.js": { "maxDuration": 30 }, "api/eta-upload.js": { "maxDuration": 30 }, "api/eta-paste.js": { "maxDuration": 30 } },
   "headers": [{ "source": "/(.*)", "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }, { "key": "Referrer-Policy", "value": "same-origin" }, { "key": "X-Frame-Options", "value": "SAMEORIGIN" }] }]
 }
