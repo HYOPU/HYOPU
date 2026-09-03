@@ -8,13 +8,13 @@ import callsHandler from '../api/port-calls.js';
 import sessionHandler from '../api/workspace.js';
 const seed=JSON.parse(fs.readFileSync(new URL('../eta-seed.json',import.meta.url),'utf8'));
 const calls=hydrateSeed(seed);
-test('ETA image contains 43 distinct port calls, exact PIC counts and uncertainty',()=>{
-  assert.equal(calls.length,43);assert.equal(new Set(calls.map(c=>c.id)).size,43);
-  for(const [pic,count] of Object.entries({'DENNIS':9,'JAE LEE':15,'JACK':14,'RICK':5}))assert.equal(calls.filter(c=>matchesFilters(c,{pic})).length,count);
+test('ETA source contains 42 distinct port calls, exact PIC counts and uncertainty',()=>{
+  assert.equal(calls.length,42);assert.equal(new Set(calls.map(c=>c.id)).size,42);
+  for(const [pic,count] of Object.entries({'DENNIS':9,'JAE LEE':15,'JACK':13,'RICK':5}))assert.equal(calls.filter(c=>matchesFilters(c,{pic})).length,count);
   assert.equal(calls.filter(c=>c.vessel==='S.RENGE'&&c.voyage==='92').length,3);
-  assert.equal(calls[8].etaRaw,'09/05 1200??');assert.equal(calls[11].etaRaw,'09/06??');assert.equal(calls[15].etaRaw,'09/09 PM');
-  assert.equal(calls[16].etaRaw,'09/12');assert.equal(calls[17].etaRaw,'09/11');
-  assert.deepEqual(calls[14].highlight,['vessel']);assert.deepEqual(calls[18].highlight,['port']);
+  assert.equal(calls[8].etaRaw,'09/05 0500');assert.equal(calls[10].etaRaw,'09/06 2000');assert.equal(calls[14].etaRaw,'09/09 PM');
+  assert.equal(calls[15].etaRaw,'09/12');assert.equal(calls[16].etaRaw,'09/11');
+  assert.deepEqual(calls[13].highlight,['vessel']);assert.deepEqual(calls[17].highlight,['port']);
 });
 test('calendar is Monday-first, rolls years, retains AM/PM and never invents a clock',()=>{
   assert.equal(calendarDays('2026-09')[0],'2026-08-31');assert.equal(calendarDays('2026-09').length,35);
@@ -24,7 +24,7 @@ test('calendar is Monday-first, rolls years, retains AM/PM and never invents a c
   assert.equal(parseEta('02/30').date,'');assert.equal(parseEta('09/09 2500').time,'');
 });
 test('in-port carries from August through ETD; other vessel visits stay separate',()=>{
-  assert.equal(calls.filter(c=>inMonth(c,'2026-09')).length,31);
+  assert.equal(calls.filter(c=>inMonth(c,'2026-09')).length,30);
   assert.ok(callsOnDay(calls,'2026-09-01').some(c=>c.id===calls[0].id));
   assert.ok(callsOnDay(calls,'2026-09-03').some(c=>c.id===calls[0].id));
   assert.ok(!callsOnDay(calls,'2026-09-04').some(c=>c.id===calls[0].id));
