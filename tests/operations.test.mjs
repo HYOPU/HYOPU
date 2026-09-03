@@ -45,23 +45,27 @@ test('calendar orders each day by ETA, then uses AM/PM and vessel names as stabl
 });
 test('hidden ETA snapshots do not appear in the calendar or ETA list filters',()=>{
   assert.equal(matchesFilters({...calls[0],etaActive:false},{}),false);
+  assert.equal(matchesFilters({...calls[0],status:'DEPARTED'},{}),false);
   assert.equal(matchesFilters({...calls[0],etaActive:true},{}),true);
 });
 test('Excel ETA snapshot updates voyage changes in place and hides removed source calls', async()=>{
   const first={id:'eta-2026-001',data:{...calls[0],vessel:'STOLT TEST',voyage:'OLD 1',port:'ULSAN',etaRaw:'09/04 0800',notes:'Keep working notes',etaActive:true},revision:4};
   const removed={id:'flow-eta-aaaaaaaaaaaaaaaaaaaaaaaa',data:{...calls[1],vessel:'REMOVED VESSEL',voyage:'OLD 2',port:'YOSU',etaRaw:'09/05 0800',etaActive:true},revision:2};
+  const history={id:'history-0001',data:{...calls[2],vessel:'HISTORICAL VESSEL',voyage:'OLD 3',port:'ULSAN',etaRaw:'08/01 0800',status:'DEPARTED',etaActive:true},revision:2};
   const posted=[];
   const request=async(_url,options={})=>{
-    if (!options.method) return response([first,removed]);
+    if (!options.method) return response([first,removed,history]);
     posted.push(...JSON.parse(options.body));
     return response([]);
   };
   const result=await syncEtaRows([{vessel:'STOLT TEST',voyage:'NEW 9',port:'ULSAN',etaRaw:'09/06 1100',etdRaw:'09/07 1200',pic:'JACK',remark:'IMPORT'}],request,'2026-09-04T01:00:00.000Z');
   const updated=posted.find(row=>row.id===first.id);
   const hidden=posted.find(row=>row.id===removed.id);
-  assert.equal(result.sourceRows,1);assert.equal(result.changed,2);assert.equal(result.hidden,1);
+  const archivedHistory=posted.find(row=>row.id===history.id);
+  assert.equal(result.sourceRows,1);assert.equal(result.changed,3);assert.equal(result.hidden,2);
   assert.equal(updated.data.voyage,'NEW 9');assert.equal(updated.data.notes,'Keep working notes');assert.equal(updated.data.etaActive,true);
   assert.equal(hidden.data.etaActive,false);assert.equal(hidden.data.vessel,'REMOVED VESSEL');
+  assert.equal(archivedHistory.data.etaActive,false);
 });
 test('all reference calls and genuine parser snapshots pass server validation',()=>{
   for(const call of calls)assert.equal(validation.validateCall(call),null);

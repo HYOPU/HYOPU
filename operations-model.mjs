@@ -23,7 +23,7 @@ export function calendarDays(month) {
 }
 export function shiftMonth(month, offset) { const day = new Date(`${month}-01T00:00:00Z`); day.setUTCMonth(day.getUTCMonth() + offset); return day.toISOString().slice(0, 7); }
 export function matchesFilters(call, { pic = '', port = '', query = '' } = {}) {
-  return call.etaActive !== false && (!pic || call.pic === pic) && (!port || call.port === port) && (!query || `${call.vessel} ${call.voyage}`.toLowerCase().includes(query.toLowerCase()));
+  return call.etaActive !== false && call.status !== 'DEPARTED' && (!pic || call.pic === pic) && (!port || call.port === port) && (!query || `${call.vessel} ${call.voyage}`.toLowerCase().includes(query.toLowerCase()));
 }
 const koreaToday = () => new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export function etaOrder(left, right) {
