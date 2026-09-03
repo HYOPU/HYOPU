@@ -1,6 +1,4 @@
-import { read } from 'xlsx';
 import { parseReport, displayTime, resolveEditedTime, applyNorTenderedRule } from './sof-parser.mjs';
-import { importWorkbook } from './sof-workbook.mjs';
 import { exportSof } from './sof-export.mjs';
 
 const $ = selector => document.querySelector(selector);
@@ -36,7 +34,7 @@ const status = message => { $('#status').textContent = message; };
 function showReport(report, name) {
   state = applyWorkspaceFields(report);
   $('#file-name').textContent = name;
-  $('#upload-panel').classList.add('hidden');
+  $('#report-panel').classList.add('hidden');
   $('#review-panel').classList.remove('hidden');
   const norCount = report.groups.filter(group => group.norTendered).length;
   status(report.groups.length ? `분석 완료 · NOR TENDERED ${norCount}/${report.groups.length}개 확인. 각 작업 시트의 NOR 필드에서 시간과 근거를 확인하세요. NOR ACCEPTED는 별도 항목이며 원문 미기재 시 빈칸입니다.` : '화물을 찾지 못했습니다. 리포트 수정으로 돌아가 입력 내용을 확인해 주세요.');
@@ -75,21 +73,6 @@ function refreshNorFields() {
   }
   for (const note of document.querySelectorAll('[data-nor-note]')) note.textContent = state.groups[note.dataset.norNote].norTenderedExplanation || '기존 SOF의 NOR 값 · 부두 이동 원문 대조 필요';
   for (const input of document.querySelectorAll('textarea[data-key="remarks"]')) input.value = state.groups[input.dataset.g].remarks.join('\n');
-}
-
-async function readFile(file) {
-  if (file.size > 20 * 1024 * 1024) { status('20MB 이하의 파일을 올려 주세요.'); return; }
-  try {
-    const raw = /\.txt$/i.test(file.name) ? await file.text() : '';
-    $('#report-text').value = raw;
-    const report = /\.txt$/i.test(file.name)
-      ? parseReport(raw)
-      : importWorkbook(read(await file.arrayBuffer(), { type: 'array', cellDates: false, sheetRows: 10000 }));
-    showReport(report, file.name);
-  } catch (error) {
-    console.error('[sof:import] failed', error.message);
-    status(`파일을 읽지 못했습니다: ${error.message}`);
-  } finally { $('#report-file').value = ''; }
 }
 
 function analyzeText() {
@@ -143,13 +126,8 @@ async function download() {
   } finally { $('#download').disabled = !hasCargo(); }
 }
 
-$('#report-file').onchange = event => event.target.files[0] && readFile(event.target.files[0]);
 $('#parse-text').onclick = analyzeText;
-for (const type of ['dragenter', 'dragover']) $('#dropzone').addEventListener(type, event => { event.preventDefault(); $('#dropzone').classList.add('drag'); });
-for (const type of ['dragleave', 'drop']) $('#dropzone').addEventListener(type, event => { event.preventDefault(); $('#dropzone').classList.remove('drag'); });
-$('#dropzone').addEventListener('drop', event => event.dataTransfer.files[0] && readFile(event.dataTransfer.files[0]));
-$('#replace-file').onclick = () => $('#report-file').click();
-$('#edit-report').onclick = () => { $('#upload-panel').classList.remove('hidden'); $('#review-panel').classList.add('hidden'); status('리포트를 수정한 뒤 다시 분석해 주세요.'); };
+$('#edit-report').onclick = () => { $('#report-panel').classList.remove('hidden'); $('#review-panel').classList.add('hidden'); status('리포트를 수정한 뒤 다시 분석해 주세요.'); };
 $('#review-panel').addEventListener('input', event => {
   const { field, g, c, key } = event.target.dataset;
   if (field) { state.fields[field] = event.target.value; publishSof(); return; }
@@ -175,12 +153,12 @@ $('#sheets').addEventListener('click', event => {
 $('#download').onclick = download;
 $('#reset').onclick = () => {
   if(!workspaceContext){location.reload();return;}
-  state=null;$('#upload-panel').classList.remove('hidden');$('#review-panel').classList.add('hidden');status('새 리포트를 분석해 주세요.');publishSof();
+  state=null;$('#report-panel').classList.remove('hidden');$('#review-panel').classList.add('hidden');status('새 리포트를 분석해 주세요.');publishSof();
 };
 // Same-origin, per-port-call bridge. No cross-window/global report storage.
 if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
   document.body.classList.add('embedded-sof');
-  const contextInputs=Array.from($('#upload-panel').querySelectorAll('input,textarea,button'));
+  const contextInputs=Array.from($('#report-panel').querySelectorAll('textarea,button'));
   contextInputs.forEach(input=>{input.disabled=true;});
   status('선박 작업 공간에 연결하는 중…');
   $('#report-text').addEventListener('input',()=>{if(workspaceContext)window.parent.postMessage({type:'hyopu:sof-raw',callId:workspaceContext.callId,raw:$('#report-text').value},location.origin);});
@@ -192,7 +170,7 @@ if (typeof window !== 'undefined' && window.parent && window.parent !== window) 
     if(heading)heading.textContent=`${context.vessel||''} / ${context.voyage||''} / ${context.port||''} · 현재 입항 건의 SOF 작업`;
     if(typeof event.data.raw==='string')$('#report-text').value=event.data.raw;
     if(event.data.report)showReport(event.data.report,'저장된 선박 SOF');
-    else status('리포트를 입력하거나 파일을 선택해 분석해 주세요.');
+    else status('리포트를 붙여넣어 분석해 주세요.');
     contextInputs.forEach(input=>{input.disabled=false;});
   });
   window.parent.postMessage({type:'hyopu:sof-ready'},location.origin);

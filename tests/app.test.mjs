@@ -156,8 +156,10 @@ async function downloadedWorkbook(app) {
 test('actual app bundle binds only existing HTML elements and needs no CDN globals', () => {
   const app = createApp();
   assert.equal(typeof app.get('parse-text').onclick, 'function');
-  assert.equal(typeof app.get('report-file').onchange, 'function');
   assert.equal(typeof app.get('download').onclick, 'function');
+  assert.ok(!html.includes('report-file'));
+  assert.ok(!html.includes('dropzone'));
+  assert.ok(!html.includes('업로드'));
   assert.equal(app.context.XLSX, undefined);
   assert.equal(app.context.fflate, undefined);
   assert.ok(!/<script[^>]+src=["']https?:/i.test(html));
@@ -174,7 +176,7 @@ for (const [name, groups, cargo] of [['betula', 4, 7], ['kashi', 1, 2], ['larix'
     const app = createApp();
     assert.ok(app.get('review-panel').classList.contains('hidden'));
     await app.paste(fixture(name));
-    assert.ok(app.get('upload-panel').classList.contains('hidden'));
+    assert.ok(app.get('report-panel').classList.contains('hidden'));
     assert.ok(!app.get('review-panel').classList.contains('hidden'));
     assert.equal(app.get('sheet-count').textContent, `${groups}개 작업 시트 · ${cargo}개 화물`);
     assert.equal((app.get('sheets').innerHTML.match(/class="sof-sheet"/g) || []).length, groups);
@@ -206,7 +208,7 @@ test('empty and unrecognized pasted input produce helpful status instead of a de
   await app.paste('  \n\t');
   assert.match(app.get('status').textContent, /분석할 리포트를 붙여넣어 주세요/);
   assert.ok(app.get('review-panel').classList.contains('hidden'));
-  assert.ok(!app.get('upload-panel').classList.contains('hidden'));
+  assert.ok(!app.get('report-panel').classList.contains('hidden'));
   await app.paste('Unrecognized report');
   assert.match(app.get('status').textContent, /화물을 찾지 못했습니다/);
   assert.equal(app.get('download').disabled, true);
@@ -214,18 +216,6 @@ test('empty and unrecognized pasted input produce helpful status instead of a de
   assert.equal(app.errors.length, 0);
 });
 
-test('TXT file onchange uses the real parser and clears the file input for retry', async () => {
-  const app = createApp();
-  const text = fixture('kashi');
-  const input = app.get('report-file');
-  input.files = [{ name: 'KASHI.TXT', size: Buffer.byteLength(text), text: async () => text }];
-  input.value = 'KASHI.TXT';
-  await input.onchange({ target: input });
-  assert.equal(app.get('file-name').textContent, 'KASHI.TXT');
-  assert.equal(app.get('sheet-count').textContent, '1개 작업 시트 · 2개 화물');
-  assert.equal(input.value, '');
-  assert.equal(app.errors.length, 0);
-});
 
 test('download click fetches the packaged template and exports real XLSX without default cloud POST', async () => {
   const app = createApp();
@@ -341,22 +331,6 @@ test('adding then removing a later HOSE OFF cargo recalculates the next berth NO
   assert.equal(workbook.Sheets.OP6.A24?.v ?? null, null);
 });
 
-test('XLSX upload uses bundled SheetJS and preserves every exported berth without CDN globals', async () => {
-  const source = createApp();
-  await source.paste(fixture('betula'));
-  await source.get('download').click();
-  const app = createApp();
-  const input = app.get('report-file');
-  const blob = source.downloads[0].blob;
-  input.files = [{ name: 'BETULA.xlsx', size: blob.size, arrayBuffer: () => blob.arrayBuffer() }];
-  await input.onchange({ target: input });
-  assert.equal(app.context.XLSX, undefined);
-  assert.equal(app.get('sheet-count').textContent, '4개 작업 시트 · 7개 화물');
-  assert.equal(cargoInput(app, 3, 0, 'bl'), '1000.278');
-  assert.equal(cargoInput(app, 3, 0, 'ship'), '998.664');
-  assert.equal(app.errors.length, 0);
-  assert.equal(app.requests.length, 0);
-});
 
 test('opted-in cloud save failure is visible and distinguished from successful local download', async () => {
   const app = createApp({ saveResponse: { ok: false, body: { saved: false, error: 'Supabase is not configured' } } });

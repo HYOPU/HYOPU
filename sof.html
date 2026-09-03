@@ -18,28 +18,21 @@
 
       <section class="hero">
         <p class="eyebrow">MARITIME DOCUMENT AUTOMATION</p>
-        <h1>SOF 자동화</h1>
-        <p class="lede">운항 리포트 또는 Time Sheet를 올리면 항차별 Statement of Facts를 정리하고, 검토 가능한 엑셀 파일로 바로 내보냅니다.</p>
+        <h1>SOF 생성</h1>
+        <p class="lede">운항 리포트를 붙여넣으면 항차별 Statement of Facts를 정리하고, 검토 가능한 엑셀 파일로 바로 내보냅니다.</p>
       </section>
 
       <section class="workspace" aria-label="SOF 생성 작업공간">
-        <div class="stepper" aria-label="진행 상태"><span class="active">01 업로드</span><i></i><span>02 검토</span><i></i><span>03 내보내기</span></div>
-        <div id="upload-panel" class="upload-panel">
-          <label id="dropzone" class="dropzone" for="report-file">
-            <input id="report-file" type="file" accept=".xlsx,.xls,.csv,.txt" hidden />
-            <span class="upload-icon">↑</span>
-            <strong>운항 리포트 또는 Time Sheet 업로드</strong>
-            <small>XLSX, XLS, CSV 또는 TXT · 최대 20MB</small>
-            <span class="choose">파일 선택</span>
-          </label>
-          <div class="hint"><strong>지원하는 정보</strong><span>입출항 · NOR · 접안 · 화물 작업 · Pilot · 출항 · 화물/탱크 정보</span></div>
-          <label class="report-input-label" for="report-text">또는 이메일 리포트 붙여넣기</label>
+        <div class="stepper" aria-label="진행 상태"><span class="active">01 리포트 입력</span><i></i><span>02 검토</span><i></i><span>03 내보내기</span></div>
+        <div id="report-panel" class="report-panel">
+          <div class="hint"><strong>리포트 붙여넣기</strong><span>입출항 · NOR · 접안 · 화물 작업 · Pilot · 출항 · 화물/탱크 정보를 포함해 붙여넣으세요.</span></div>
+          <label class="report-input-label" for="report-text">이메일 또는 운항 리포트 원문</label>
           <textarea id="report-text" rows="12" placeholder="선명 / 항차 / ULSAN / DEP.REPORT&#10;AUG' 2026&#10;26/1100 : EOSP"></textarea>
           <button id="parse-text" class="primary paste-button">리포트 분석</button>
         </div>
 
         <section id="review-panel" class="review-panel hidden" aria-live="polite">
-          <div class="review-head"><div><p class="eyebrow">READY FOR REVIEW</p><h2 id="file-name">리포트</h2><p id="sheet-count"></p></div><div class="review-tools"><button id="edit-report" class="text-button">리포트 수정</button><button id="replace-file" class="text-button">다른 파일 선택</button></div></div>
+          <div class="review-head"><div><p class="eyebrow">READY FOR REVIEW</p><h2 id="file-name">붙여넣은 운항 리포트</h2><p id="sheet-count"></p></div><div class="review-tools"><button id="edit-report" class="text-button">리포트 수정</button></div></div>
           <div class="summary-grid" id="summary-grid"></div>
           <div id="warnings" class="warnings" role="note"></div>
           <div id="sheets"></div>

@@ -4,9 +4,8 @@ import validation from './lib/call-validation.js';
 const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const definitions = {
   cargo: [['operation','작업','operation'],['number','CGO #'],['name','화물명'],['bl','B/L FIG (MT)'],['ship','SHIP FIG (MT)'],['tanks','탱크'],['party','SHIPPER / CONSIGNEE'],['note','메모']],
-  tasks: [['done','완료','checkbox'],['text','할 일'],['due','기한','date']],
 };
-const tabLabels = [['overview','입항 정보'],['activities','ACTIVITY'],['cargo','화물 정보'],['tasks','TO DO'],['sof','SOF 생성']];
+const tabLabels = [['overview','입항 정보'],['cargo','화물 정보'],['sof','SOF 생성']];
 const options = (values, selected, empty=false) => `${empty?'<option value="">미배정</option>':''}${values.map(value=>`<option value="${esc(value)}" ${value===selected?'selected':''}>${esc(value)}</option>`).join('')}`;
 function confirmAction(message) {
   return new Promise(resolve=>{
@@ -61,7 +60,6 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
   function renderPanel() {
     let content='';
     if(tab==='overview') content=`<div class="detail-section-heading"><div><h3>Port call details</h3><p>같은 선박·항차라도 항만별 업무 기록은 독립적으로 관리합니다.</p></div></div><div class="detail-grid">${field('vessel','VESSEL')}${field('voyage','VOYAGE')}${field('port','PORT','text',PORTS)}${field('pic','담당자 · PIC','text',PICS)}${field('year','기준 연도','number')}${field('etaRaw','ETA / ARRIVED (LT)')}${field('etdRaw','ETD (LT)')}${field('status','현재 상태','text',STATUSES)}</div><p class="field-hint">일시 표기: MM/DD HHmm · AM/PM · ?? 유지 / 시각 미정은 날짜만 입력</p><div class="note-heading"><h3>업무 메모</h3><span>THIS PORT CALL ONLY</span></div><textarea data-field="notes" rows="8" placeholder="접안 계획, 주의사항, 인계할 내용 등을 자유롭게 기록하세요.">${esc(draft.notes)}</textarea>`;
-    else if(tab==='activities') content=`<div class="detail-section-heading"><div><h3>ACTIVITY 메모</h3><p>시간순 기록, 전달 사항, 확인 내용을 자유롭게 작성하세요. 입력 후 자동 저장됩니다.</p></div></div><textarea class="activity-notepad" data-field="activityNotes" rows="18" placeholder="예) 09/03 0900 · Terminal confirmed loading window&#10;예) 09/03 1030 · Cargo document received">${esc(draft.activityNotes)}</textarea>`;
     else if(tab==='cargo') content=`<div class="detail-section-heading"><div><h3>VCR · Voyage Cargo Report</h3><p>VCR의 Load Schedule 표를 Excel에서 복사해 붙여넣으면 이 입항 항만(${esc(draft.port)})의 적재 화물을 반영합니다.</p></div></div><div class="vcr-paste"><label for="vcr-paste-text"><strong>VCR Excel 표 붙여넣기</strong><span>Load Port · Load Berth · Code · Cargo Name · Quantity (MT) · Charterer · Tanks 열을 포함해 복사하세요.</span></label><textarea id="vcr-paste-text" rows="7" placeholder="Excel에서 VCR Load Schedule 표를 복사한 뒤 여기에 붙여넣으세요."></textarea><div class="form-actions"><button id="vcr-paste-import" class="primary">붙여넣은 VCR 화물 반영</button></div></div>${draft.sof?'<button id="import-sof-cargo" class="subtle" style="margin-bottom:16px">SOF 분석 화물 가져오기</button>':''}${renderRows('cargo')}`;
     else if(definitions[tab]) content=renderRows(tab);
     else content=`<div class="detail-section-heading"><div><h3>SOF 생성</h3><p>리포트 입력·분석·SOF 생성·파일 출력은 이 한 곳에서 처리합니다. 협운해운 원본 서식은 그대로 유지됩니다.</p></div>${draft.sof?'<span class="status-tag inport">분석 기록 연결됨</span>':''}</div><div class="sof-context"><strong>${esc(vesselNameForSof(draft.vessel)) || '선박명 입력 필요'} / ${esc(draft.voyage) || '항차 입력 필요'} / ${esc(draft.port) || '항만 입력 필요'}</strong><span>선박 페이지의 선박명·항차·항만이 SOF에 자동 적용됩니다.</span></div><p id="sof-link-status" class="sof-link-status">리포트 분석 후 이 입항 건과 일치하는 결과만 연결합니다.</p><iframe id="sof-frame" title="선박별 SOF 생성" src="/sof.html?embedded=1"></iframe>`;
@@ -74,7 +72,6 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     opener=document.activeElement;
     original=id?getCall(id):null;
     draft=original?structuredClone(original):blankCall(crypto.randomUUID());
-    if(typeof draft.activityNotes!=='string')draft.activityNotes=(draft.activities||[]).map(row=>[row.time,row.activity,row.company,row.note].filter(Boolean).join(' · ')).filter(Boolean).join('\n');
     if(typeof draft.vcrFileName!=='string')draft.vcrFileName='';
     dirty=!original;tab='overview';
     dialog.innerHTML=`<header class="detail-header"><div><p class="eyebrow">VESSEL WORKSPACE <span> / ${esc(draft.port)}</span></p><h2>${esc(draft.vessel)||'새 선박 일정'} <small>/ ${esc(draft.voyage)||'NEW PORT CALL'}</small></h2><p><span class="detail-pic">${esc(draft.pic)||'PIC 미배정'}</span><span>${esc(draft.etaRaw)||'ETA 입력 필요'}</span><span class="status-tag ${draft.status.toLowerCase()}">${esc(draft.status)}</span></p></div><button id="close-vessel" class="icon-button" aria-label="선박 상세 닫기">×</button></header><nav class="detail-tabs" aria-label="선박 업무 탭">${tabLabels.map(([key,label])=>`<button data-tab="${key}" class="${key===tab?'active':''}">${label}</button>`).join('')}</nav><div id="detail-panel" class="detail-panel"></div><footer class="detail-save"><div><strong id="save-status" role="status"></strong><small id="save-help"></small></div><div class="save-buttons"><button id="backup-draft" class="subtle">초안 백업</button><button id="reload-call" class="subtle">최신 기록</button><button id="save-call" class="primary">변경사항 저장</button></div></footer>`;
