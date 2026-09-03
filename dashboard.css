@@ -14,3 +14,5 @@ dialog{color:var(--text);background:var(--surface);border:1px solid #3a4b5a;bord
 @media(max-width:760px){.metric-label{font-size:8px}.connection-banner,.description{font-size:10px}.calendar{min-width:900px}}
 .confirm-dialog{width:min(410px,92vw);padding:25px}.confirm-dialog h3{margin-top:0;font-size:16px}.confirm-dialog p{font-size:12px;line-height:1.8;color:var(--muted)}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+.page-actions{display:flex;gap:9px;align-items:center}.eta-upload-control{display:inline-flex;align-items:center;cursor:pointer;border-color:#385461}.eta-upload-control:hover{background:#20303d}
+@media(max-width:760px){.page-actions{width:100%;justify-content:flex-end}.page-actions .primary,.eta-upload-control{font-size:10px;padding:9px;white-space:nowrap}}
