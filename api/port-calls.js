@@ -1,5 +1,37 @@
 const { json, backend, configured, sameOrigin } = require('../lib/workspace-auth');
 const { validateCall } = require('../lib/call-validation');
+const etaSeed = require('../eta-seed.json');
+
+function defaultCalls() {
+  return etaSeed.map((row, index) => ({
+    id: `eta-2026-${String(index + 1).padStart(3, '0')}`,
+    vessel: row.vessel,
+    voyage: row.voyage,
+    port: row.port,
+    etaRaw: row.etaRaw,
+    etdRaw: row.etdRaw,
+    pic: row.pic,
+    highlight: row.highlight || [],
+    year: 2026,
+    status: row.remark === 'INPORT' ? 'INPORT' : 'PRE-ARRIVAL',
+    activities: [], activityNotes: '', cargo: [], crew: [], tasks: [], notes: '',
+    vcrFileName: '', latestReport: '', reportType: 'DEP.REPORT', reportReceived: '',
+    reportChecked: false, sof: null,
+  }));
+}
+
+async function seedWorkspaceIfEmpty(rows) {
+  if (rows.length) return rows;
+  const now = new Date().toISOString();
+  const defaults = defaultCalls();
+  const seed = await backend('/rest/v1/hyopu_port_calls?on_conflict=id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=ignore-duplicates,return=representation' },
+    body: JSON.stringify(defaults.map(data => ({ id: data.id, data, revision: 1, updated_at: now }))),
+  });
+  if (!seed.ok) throw new Error('기본 ETA 데이터를 저장하지 못했습니다.');
+  return await seed.json();
+}
 module.exports = async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
   if (!['GET','POST','PATCH'].includes(req.method)) return json(res,405,{error:'Method not allowed'});
@@ -11,7 +43,8 @@ module.exports = async function handler(req,res) {
       if(id && !/^[a-zA-Z0-9-]{1,80}$/.test(id))return json(res,400,{error:'잘못된 식별자입니다.'});
       const result=await backend(`/rest/v1/hyopu_port_calls?select=id,data,revision,updated_at${id?`&id=eq.${encodeURIComponent(id)}`:'&order=id.asc&limit=1000'}`);
       if(!result.ok)return json(res,502,{error:'선박 목록을 불러오지 못했습니다.'});
-      const rows=await result.json();
+      let rows=await result.json();
+      if (!id) rows=await seedWorkspaceIfEmpty(rows);
       return json(res,200,{calls:rows.map(row=>({...row.data,id:row.id,revision:row.revision,updatedAt:row.updated_at}))});
     }
     const {call,revision}=req.body||{};
