@@ -22,23 +22,38 @@ function confirmAction(message) {
 }
 export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, confirmDiscard = confirmAction }) {
   const dialog=document.querySelector('#vessel-dialog');
-  let draft=null, dirty=false, tab='overview', original=null, busy=false, opener=null, generation=0, startNewSof=false;
+  let draft=null, dirty=false, tab='overview', original=null, busy=false, opener=null, generation=0, startNewSof=false, autoSaveTimer=null;
   const $=selector=>dialog.querySelector(selector);
   function field(key,label,type='text',list) {
     return `<label class="detail-field"><span>${label}</span>${list?`<select data-field="${key}">${options(list,draft[key],key==='pic')}</select>`:`<input data-field="${key}" type="${type}" value="${esc(draft[key])}" ${key==='etaRaw'||key==='etdRaw'?'placeholder="09/05 1200??"':''}>`}</label>`;
   }
-  function markDirty() {dirty=!original||JSON.stringify(draft)!==JSON.stringify(original); updateSaveStatus();}
+  const savingAvailable = () => getSession()?.ready !== false;
+  function markDirty() {dirty=!original||JSON.stringify(draft)!==JSON.stringify(original); updateSaveStatus(); queueAutoSave();}
   function updateSaveStatus(message='') {
     const session=getSession();
     if(!draft)return;
     $('#save-status').textContent=message||(dirty?'미저장 변경사항':draft.updatedAt?`마지막 저장 ${new Date(draft.updatedAt).toLocaleString('ko-KR')}`:draft.revision?'공유 저장된 기록':'첨부 ETA 원본 · 아직 공유 저장되지 않음');
-    $('#save-call').disabled=busy||!dirty||!session.authenticated||session.member?.role!=='editor';
-    $('#save-call').textContent=busy?'저장 중…':'변경사항 저장';
-    $('#draft-login').hidden=Boolean(session.authenticated);
-    $('#save-help').textContent=session.authenticated?session.member.role==='editor'?'이 입항 건에만 저장됩니다.':'현재 계정은 조회 전용입니다.': '메모는 아직 저장되지 않습니다. 팀 로그인 후 저장해 주세요.';
+    $('#save-call').disabled=busy||!dirty||!savingAvailable();
+    $('#save-call').textContent=busy?'저장 중…':'지금 저장';
+    $('#save-help').textContent=savingAvailable()?'이 입항 건에만 자동 저장됩니다.':'공유 저장 연결을 확인하는 중입니다.';
     dialog.querySelectorAll('#detail-panel input,#detail-panel textarea,#detail-panel select,#detail-panel button,[data-tab],#reload-call,#close-vessel').forEach(element=>{element.disabled=busy;});
     if($('#sof-frame'))$('#sof-frame').inert=busy;
     dialog.classList.toggle('is-dirty',dirty);
+  }
+  async function persistDraft(automatic=false) {
+    if(!draft||busy||!dirty||!savingAvailable())return false;
+    const error=validation.validateCall(draft);if(error){updateSaveStatus(error);return false;}
+    busy=true;updateSaveStatus(automatic?'자동 저장 중…':'저장 중…');
+    try{
+      const saved=await saveCall(draft,!original);draft=structuredClone(saved);original=saved;dirty=false;onSaved(saved);
+      updateSaveStatus(automatic?'자동 저장됨':'공유 저장 완료');return true;
+    }catch(error){updateSaveStatus(error.message);return false;
+    }finally{busy=false;const message=$('#save-status').textContent;updateSaveStatus(message);}
+  }
+  function queueAutoSave() {
+    clearTimeout(autoSaveTimer);
+    if(!dirty||busy||!savingAvailable())return;
+    autoSaveTimer=setTimeout(()=>persistDraft(true),800);
   }
   function renderRows(key) {
     const fields=definitions[key];
@@ -62,11 +77,12 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     draft=original?structuredClone(original):blankCall(crypto.randomUUID());
     dirty=!original;tab='overview';
     dialog.innerHTML=`<header class="detail-header"><div><p class="eyebrow">VESSEL WORKSPACE <span> / ${esc(draft.port)}</span></p><h2>${esc(draft.vessel)||'새 선박 일정'} <small>/ ${esc(draft.voyage)||'NEW PORT CALL'}</small></h2><p><span class="detail-pic">${esc(draft.pic)||'PIC 미배정'}</span><span>${esc(draft.etaRaw)||'ETA 입력 필요'}</span><span class="status-tag ${draft.status.toLowerCase()}">${esc(draft.status)}</span></p></div><button id="close-vessel" class="icon-button" aria-label="선박 상세 닫기">×</button></header><nav class="detail-tabs" aria-label="선박 업무 탭">${tabLabels.map(([key,label])=>`<button data-tab="${key}" class="${key===tab?'active':''}">${label}</button>`).join('')}</nav><div id="detail-panel" class="detail-panel"></div><footer class="detail-save"><div><strong id="save-status" role="status"></strong><small id="save-help"></small></div><div class="save-buttons"><button id="backup-draft" class="subtle">초안 백업</button><button id="reload-call" class="subtle">최신 기록</button><button id="save-call" class="primary">변경사항 저장</button></div></footer>`;
-    $('#save-call').insertAdjacentHTML('beforebegin','<button id="draft-login" class="subtle">팀 로그인</button>');
     renderPanel();updateSaveStatus();dialog.showModal();
   }
   async function close() {
     if(busy)return false;
+    clearTimeout(autoSaveTimer);
+    if(dirty&&savingAvailable())await persistDraft(true);
     if(dirty&&!await confirmDiscard('저장되지 않은 변경사항이 있습니다. 닫으면 사라집니다. 닫을까요?'))return false;
     generation++;dialog.close();draft=null;dirty=false;if(opener?.isConnected)opener.focus();return true;
   }
@@ -92,18 +108,13 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     if(button.id==='import-sof-cargo'&&draft.sof){if(!validation.sofMatchesCall(draft.sof,draft)){updateSaveStatus('SOF와 입항 정보가 다릅니다. 화물을 가져오지 않았습니다.');return;}if(draft.cargo.length&&!await confirmDiscard('현재 화물 표를 SOF 분석 화물로 바꿀까요?'))return;draft.cargo=draft.sof.groups.flatMap(group=>group.cargo.map(cargo=>({operation:group.operation,number:cargo.number,name:cargo.name,bl:cargo.bl==null?'':String(cargo.bl),ship:cargo.ship==null?'':String(cargo.ship),tanks:cargo.tank,party:cargo.party||'',note:group.berth})));markDirty();renderPanel();}
     if(button.dataset.removeRow){draft[button.dataset.removeRow].splice(Number(button.dataset.index),1);markDirty();renderPanel();}
     if(button.id==='close-vessel')close();
-    if(button.id==='draft-login')document.querySelector('#login-dialog').showModal();
     if(button.id==='backup-draft') {const url=URL.createObjectURL(new Blob([JSON.stringify(draft,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`HYOPU_DRAFT_${draft.vessel.replace(/[^a-z0-9_-]/gi,'_')||'new'}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);updateSaveStatus('초안 파일을 다운로드했습니다. 공유 저장은 별도로 필요합니다.');}
     if(button.id==='reload-call'){
       if(dirty&&!await confirmDiscard('내 초안을 버리고 최신 공유 기록을 불러올까요? 필요하면 먼저 초안 백업을 눌러 주세요.'))return;
       const ticket=generation,callId=draft.id;busy=true;updateSaveStatus('최신 공유 기록을 불러오는 중…');
       try{const latest=await getCall(callId,true);if(ticket!==generation||draft?.id!==callId)return;if(!latest){updateSaveStatus('아직 공유 저장된 기록이 없습니다.');return;}draft=structuredClone(latest);original=latest;dirty=false;renderPanel();updateSaveStatus();}catch(error){if(ticket===generation)updateSaveStatus(error.message);}finally{if(ticket===generation){busy=false;const message=$('#save-status').textContent;updateSaveStatus(message);}}
     }
-    if(button.id==='save-call'){
-      const error=validation.validateCall(draft);if(error){updateSaveStatus(error);return;}
-      busy=true;updateSaveStatus('공유 저장 중…');
-      try{const saved=await saveCall(draft,!original);draft=structuredClone(saved);original=saved;dirty=false;onSaved(saved);updateSaveStatus('공유 저장 완료');}catch(error){updateSaveStatus(error.message);}finally{busy=false;const message=$('#save-status').textContent;updateSaveStatus(message);}
-    }
+    if(button.id==='save-call')await persistDraft();
   });
   const normalizeVessel=value=>String(value||'').toUpperCase().replace(/^S\./,'STOLT ').replace(/[^A-Z0-9]/g,'');
   const normalize=value=>String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');

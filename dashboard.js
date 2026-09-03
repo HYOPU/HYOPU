@@ -5,7 +5,7 @@ const $ = selector => document.querySelector(selector);
 export const esc = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 let calls = hydrateSeed(seedRows), month = '2026-09', view = 'calendar', listAll = true;
-let session = {configured:false,authenticated:false};
+let session = {configured:false,ready:false,shared:true,member:{role:'editor'}};
 let filters = { pic: '', port: '', query: '' };
 function portClass(port) { return port.toLowerCase().replace(/[^a-z]/g, ''); }
 function portTag(call) { return `<span class="port-tag port-${portClass(call.port)} ${call.highlight?.includes('port') ? 'highlight' : ''}">${esc(call.port)}</span>`; }
@@ -48,15 +48,14 @@ $('#search').oninput=event=>{filters.query=event.target.value;render();};
 async function api(path, options={}) {
   let result;try{result=await fetch(path,{...options,headers:{'Content-Type':'application/json',...options.headers}});}catch{throw new Error('서버 응답을 확인하지 못했습니다. 초안을 백업하고 최신 기록을 확인해 주세요.');}
   let body;try{body=await result.json();}catch{throw new Error('공유 저장 API를 사용할 수 없습니다.');}
-  if(!result.ok){if(result.status===401){session.authenticated=false;connectionStatus();workspace.refreshStatus();}throw new Error(body.error||'요청을 완료하지 못했습니다.');}
+  if(!result.ok)throw new Error(body.error||'요청을 완료하지 못했습니다.');
   return body;
 }
 function connectionStatus() {
   const banner=$('#connection-banner');
-  banner.classList.toggle('good',Boolean(session.authenticated));
-  banner.textContent=session.authenticated?`공유 업무 공간 · ${session.member.pic||session.member.email} · ${session.member.role==='viewer'?'조회 전용':'팀 기록 저장 가능'} · PIC 필터는 조회 범위만 변경합니다.`:session.ready?'팀 로그인 전 · 첨부 ETA 원본 43건을 표시합니다. 팀 기록은 로그인 후 조회·저장할 수 있습니다.':`${session.error||'공유 저장 연결이 필요합니다.'} 첨부 ETA 원본 43건을 표시합니다. 실시간 정보가 아니며 메모는 아직 저장되지 않습니다.`;
-  $('#account-button').textContent=session.authenticated?`${session.member.pic||'팀 계정'} · 로그아웃`:'팀 로그인';
-  $('#source-label').textContent=session.authenticated?'SOURCE · SHARED WORKSPACE':'SOURCE · KOREA ETA UPDATE / 2026';
+  banner.classList.toggle('good',Boolean(session.ready));
+  banner.textContent=session.ready?'공유 업무 공간 연결됨 · 선박 상세의 변경사항은 자동 저장됩니다. PIC 필터는 조회 범위만 변경합니다.':`${session.error||'공유 저장 연결이 필요합니다.'} 연결 전에는 첨부 ETA 원본만 표시됩니다.`;
+  $('#source-label').textContent=session.ready?'SOURCE · SHARED WORKSPACE':'SOURCE · KOREA ETA UPDATE / 2026';
 }
 async function loadCalls() {const result=await api('/api/port-calls');calls=result.calls;render();}
 const workspace=createVesselWorkspace({
@@ -66,18 +65,8 @@ const workspace=createVesselWorkspace({
   onSaved:call=>{const index=calls.findIndex(item=>item.id===call.id);if(index<0)calls.push(call);else calls[index]=call;render();},
 });
 function openCall(id) { workspace.open(id); }
-$('#account-button').onclick=async()=>{
-  if(!session.authenticated){$('#login-dialog').showModal();return;}
-  if(workspace.hasDraft()){showToast('먼저 선박 상세의 변경사항을 저장하거나 초안을 백업해 주세요.');return;}
-  try{await api('/api/workspace',{method:'POST',body:JSON.stringify({action:'logout'})});session.authenticated=false;session.member=null;calls=hydrateSeed(seedRows);$('#vessel-dialog').close();connectionStatus();render();}catch(error){showToast(error.message);}
-};
-$('#login-close').onclick=()=>$('#login-dialog').close();
 $('#new-call').onclick=()=>workspace.open();
-$('#login-form').onsubmit=async event=>{
-  event.preventDefault();const form=event.target,button=form.querySelector('.primary');button.disabled=true;$('#login-status').textContent='로그인 확인 중…';
-  try{const data=new FormData(form);const result=await api('/api/workspace',{method:'POST',body:JSON.stringify({action:'login',email:data.get('email'),password:data.get('password')})});session={...session,...result,ready:true};await loadCalls();connectionStatus();workspace.refreshStatus();$('#login-dialog').close();form.reset();showToast('팀 업무 공간에 연결했습니다.');}catch(error){$('#login-status').textContent=error.message;}finally{button.disabled=false;}
-};
 let toastTimer;
 function showToast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{$('#toast').hidden=true;},5000);}
 render();
-api('/api/workspace').then(async result=>{session=result;if(session.authenticated)await loadCalls();connectionStatus();workspace.refreshStatus();}).catch(error=>{session.error=error.message;connectionStatus();});
+api('/api/workspace').then(async result=>{session=result;if(session.ready)await loadCalls();connectionStatus();workspace.refreshStatus();}).catch(error=>{session.error=error.message;connectionStatus();});

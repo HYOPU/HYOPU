@@ -118,3 +118,11 @@ test('raw text typed inside SOF survives a tab change without prematurely overwr
   const app=harness(deferred());
   try{app.workspace.open('A');await app.click('sof',{tab:'sof'});app.raw('typed draft');await app.click('overview',{tab:'overview'});await app.click('sof',{tab:'sof'});app.ready();assert.equal(app.messages.at(-1).raw,'typed draft');assert.equal(app.messages.at(-1).report,null);}finally{app.restore();}
 });
+test('vessel changes are automatically saved after a short idle delay',async()=>{
+  const app=harness(deferred());
+  try{
+    await app.workspace.open('A');app.editNotes('Saved without a login step');
+    await new Promise(resolve=>setTimeout(resolve,850));
+    assert.equal(app.saved?.notes,'Saved without a login step');
+  }finally{app.restore();}
+});

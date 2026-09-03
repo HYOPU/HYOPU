@@ -69,10 +69,13 @@ async function withBackend(work,overrides={}){
   try{await work({requests,getStored:()=>stored});}finally{global.fetch=original.fetch;for(const [key,value] of [['SUPABASE_URL',original.url],['SUPABASE_SERVICE_ROLE_KEY',original.key]])if(value===undefined)delete process.env[key];else process.env[key]=value;}
 }
 test('missing backend is honest and never saves',()=>withBackend(async()=>{delete process.env.SUPABASE_URL;const status=await run(sessionHandler,request());assert.equal(status.body.configured,false);const save=await run(callsHandler,request('POST',{call:calls[0],revision:0}));assert.equal(save.status,503);assert.equal(save.body.saved,false);}));
-test('anonymous access and unauthenticated document writes are denied before data reads',()=>withBackend(async({requests})=>{const req=request();req.headers.cookie='';const result=await run(callsHandler,req);assert.equal(result.status,401);assert.equal(requests.length,0);}));
-test('invalid tokens, nonmembers and viewer writes are denied',async()=>{
-  for(const config of [{invalidToken:true},{nonMember:true},{role:'viewer'}])await withBackend(async()=>{const result=await run(callsHandler,request('PATCH',{call:calls[0],revision:1}));assert.equal(result.status,config.role?403:401);},config);
-});
+test('shared workspace reads do not require a login session',()=>withBackend(async({requests})=>{const req=request();req.headers.cookie='';const result=await run(callsHandler,req);assert.equal(result.status,200);assert.equal(requests.length,1);assert.ok(!requests[0].url.includes('/auth/v1/user'));}));
+test('shared saves skip auth and membership lookups while retaining server-side revision checks',()=>withBackend(async({requests,getStored})=>{
+  const changed={...calls[0],notes:'Autosaved without sign-in'};
+  const result=await run(callsHandler,request('PATCH',{call:changed,revision:1}));
+  assert.equal(result.status,200);assert.equal(getStored().data.notes,'Autosaved without sign-in');
+  assert.ok(!requests.some(item=>item.url.includes('/auth/v1/user')||item.url.includes('hyopu_members')));
+}));
 test('cross-origin and non-JSON writes never reach Supabase',()=>withBackend(async({requests})=>{
   const req=request('PATCH',{call:calls[0],revision:1});req.headers.origin='https://evil.invalid';assert.equal((await run(callsHandler,req)).status,403);
   req.headers.origin='https://hyopu.example';req.headers['content-type']='text/plain';assert.equal((await run(callsHandler,req)).status,403);assert.equal(requests.length,0);
@@ -83,12 +86,12 @@ test('authenticated save is persisted and re-read; simultaneous stale edit gets 
   const stale=await run(callsHandler,request('PATCH',{call:{...changed,notes:'stale'},revision:1}));assert.equal(stale.status,409);assert.equal(getStored().data.notes,'QA persist');
   const reload=await run(callsHandler,request());assert.equal(reload.body.calls[0].notes,'QA persist');assert.equal(reload.headers['Cache-Control'],'no-store');assert.ok(!JSON.stringify(reload).includes('secret-test-key'));
 }));
-test('login validates membership and issues HttpOnly same-site secure cookie without exposing keys',()=>withBackend(async()=>{
-  const login=await run(sessionHandler,request('POST',{action:'login',email:'member@example.invalid',password:'test-only'}));assert.equal(login.status,200);assert.match(login.headers['Set-Cookie'],/HttpOnly; Secure; SameSite=Strict/);assert.ok(!JSON.stringify(login.body).includes('secret-')); 
+test('workspace readiness is shared and does not read membership records',()=>withBackend(async({requests})=>{
+  const req=request();req.headers.cookie='';const result=await run(sessionHandler,req);assert.equal(result.body.ready,true);assert.equal(result.body.shared,true);assert.ok(!requests.some(item=>item.url.includes('hyopu_members')));
 }));
-test('workspace readiness requires both membership and records schema',()=>withBackend(async()=>{
-  const req=request();req.headers.cookie='';const result=await run(sessionHandler,req);assert.equal(result.body.ready,false);
-},{fetch:async url=>response([],url.includes('hyopu_members')?404:200)}));
+test('workspace readiness requires the port-call schema',()=>withBackend(async()=>{
+  const result=await run(sessionHandler,request());assert.equal(result.body.ready,false);
+},{fetch:async()=>response([],404)}));
 test('network ambiguity never falsely claims a failed commit',()=>withBackend(async()=>{
   const result=await run(callsHandler,request('PATCH',{call:calls[0],revision:1}));assert.equal(result.status,502);assert.equal(result.body.saved,null);assert.match(result.body.error,/결과를 확인하지/);
-},{fetch:async url=>{if(url.includes('/auth/v1/user'))return response({id:'u',email:'test@example.invalid'});if(url.includes('hyopu_members'))return response([{role:'editor',user_id:'u'}]);throw new Error('response lost after commit');}}));
+},{fetch:async()=>{throw new Error('response lost after commit');}}));

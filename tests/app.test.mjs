@@ -288,17 +288,17 @@ test('editing the previous berth HOSE OFF updates NOR inputs in place and the do
   const workbook = await downloadedWorkbook(app);
   assert.equal(workbook.Sheets.JSTT3.B15.v, '29/0430');
   assert.equal(workbook.Sheets['OTK(S)'].B15.v, '30/0515');
-  assert.equal(workbook.Sheets.CTK.B15.v, 'REVIEW');
+  assert.equal(workbook.Sheets.CTK.B15?.v ?? '', '');
 });
 
-test('correcting an incomplete previous HOSE OFF refreshes NOR review notes and remarks in place', async () => {
+test('correcting an incomplete previous HOSE OFF refreshes NOR review notes without adding a remark', async () => {
   const app = createApp();
   await app.paste(fixture('betula'));
   await app.get('review-panel').dispatch('input', { target: { dataset: { g: '0', c: '0', key: 'hoseOff' }, value: '' } });
   assert.equal(norInput(app, 1).value, '');
   assert.match(norNote(app, 1).textContent, /확인 필요/);
   const remarks = app.context.document.querySelectorAll('textarea[data-key="remarks"]').find(input => input.dataset.g === '1');
-  assert.match(remarks.value, /REVIEW REQUIRED: NOR TENDERED/);
+  assert.ok(!/REVIEW REQUIRED: NOR TENDERED/.test(remarks.value));
   await app.get('review-panel').dispatch('input', { target: { dataset: { g: '0', c: '0', key: 'hoseOff' }, value: '29/0430' } });
   assert.equal(norInput(app, 1).value, '29/0430');
   assert.match(norNote(app, 1).textContent, /29\/0430/);

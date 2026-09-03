@@ -1,10 +1,11 @@
-const { json, backend, authorize } = require('../lib/workspace-auth');
+const { json, backend, configured, sameOrigin } = require('../lib/workspace-auth');
 const { validateCall } = require('../lib/call-validation');
 module.exports = async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
   if (!['GET','POST','PATCH'].includes(req.method)) return json(res,405,{error:'Method not allowed'});
   try {
-    const member=await authorize(req,res,req.method!=='GET'); if(!member)return;
+    if(!configured())return json(res,503,{configured:false,saved:false,error:'공유 저장 설정이 필요합니다.'});
+    if(req.method!=='GET'&&!sameOrigin(req))return json(res,403,{error:'다른 사이트에서 보낸 저장 요청은 허용하지 않습니다.'});
     if(req.method==='GET') {
       const id=req.query?.id;
       if(id && !/^[a-zA-Z0-9-]{1,80}$/.test(id))return json(res,400,{error:'잘못된 식별자입니다.'});
@@ -21,7 +22,7 @@ module.exports = async function handler(req,res) {
     const creating=req.method==='POST';
     if(creating && revision!==0)return json(res,400,{error:'신규 기록 버전이 올바르지 않습니다.'});
     const result=await backend(`/rest/v1/hyopu_port_calls${creating?'':`?id=eq.${encodeURIComponent(call.id)}&revision=eq.${revision}`}`,{
-      method:creating?'POST':'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({id:call.id,data,revision:revision+1,updated_by:member.user_id,updated_at:new Date().toISOString()})
+      method:creating?'POST':'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({id:call.id,data,revision:revision+1,updated_at:new Date().toISOString()})
     });
     if(result.status===409)return json(res,409,{saved:false,error:'다른 담당자가 먼저 저장했습니다. 최신 내용을 확인한 뒤 다시 저장해 주세요.'});
     if(!result.ok)return json(res,502,{saved:false,error:'서버 저장에 실패했습니다. 입력 내용은 이 화면에 남아 있습니다.'});
