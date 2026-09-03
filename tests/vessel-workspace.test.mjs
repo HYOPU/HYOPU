@@ -50,6 +50,7 @@ function harness(reload) {
     ready: () => callbacks['window:message']({origin:'https://review.invalid',source:frame.contentWindow,data:{type:'hyopu:sof-ready'}}),
     raw: text => callbacks['window:message']({origin:'https://review.invalid',source:frame.contentWindow,data:{type:'hyopu:sof-raw',callId:'A',raw:text}}),
     editNotes: value => callbacks.input({ target: { dataset: { field: 'notes' }, value, type: 'text' } }),
+    editCargo: (key, value) => callbacks.input({ target: { dataset: { list: 'cargo', index: '0', key }, value, type: 'text' } }),
     get saved() { return saved; },
     restore() {
       for (const [key, value] of Object.entries(previousGlobals)) {
@@ -112,4 +113,19 @@ test('vessel changes are automatically saved after a short idle delay',async()=>
     await new Promise(resolve=>setTimeout(resolve,850));
     assert.equal(app.saved?.notes,'Saved without a login step');
   }finally{app.restore();}
+});
+
+test('changing a proforma berth refreshes its known maximum draft before auto-save', async () => {
+  const app=harness(deferred());
+  try {
+    app.calls.A.cargo=[{operation:'DISCH',number:'150',name:'METHANOL',bl:'100.000',ship:'',tanks:'1P',party:'RECEIVER',berth:'P#42',maxDraft:'',coaster:'',note:''}];
+    await app.workspace.open('A');
+    await app.click('proforma',{tab:'proforma'});
+    assert.match(app.dialog.querySelector('#detail-panel').innerHTML,/MAX DRAFT/);
+    assert.match(app.dialog.querySelector('#detail-panel').innerHTML,/10\.20M/);
+    app.editCargo('berth','JSTT SP#5');
+    await new Promise(resolve=>setTimeout(resolve,850));
+    assert.equal(app.saved?.cargo[0].berth,'JSTT SP#5');
+    assert.equal(app.saved?.cargo[0].maxDraft,'12.35M');
+  } finally { app.restore(); }
 });

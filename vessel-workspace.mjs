@@ -1,5 +1,6 @@
 import { PICS, PORTS, STATUSES, blankCall } from './operations-model.mjs';
 import { parseVcrClipboard, vesselNameForSof } from './vcr-parser.mjs';
+import { maxDraftForBerth } from './berth-drafts.mjs';
 import validation from './lib/call-validation.js';
 const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const definitions = {
@@ -12,6 +13,9 @@ const proformaBerth = cargo => {
   const match=String(cargo.note||'').match(/^VCR\s*·\s*[^/]+\/\s*([^→]+?)(?:\s*→|$)/i);
   return match ? match[1].trim() : String(cargo.note||'');
 };
+const proformaMaxDraft = cargo => typeof cargo.maxDraft === 'string' && cargo.maxDraft.trim()
+  ? cargo.maxDraft
+  : maxDraftForBerth(proformaBerth(cargo));
 const quantity = value => {
   const number=Number(String(value||'').replaceAll(',',''));
   return Number.isFinite(number) ? number.toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) : '';
@@ -73,7 +77,7 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
   }
   function renderProforma() {
     const total=draft.cargo.reduce((sum,cargo)=>sum+(Number(String(cargo.bl||'').replaceAll(',',''))||0),0);
-    return `<div class="detail-section-heading"><div><h3>PROFORMA</h3><p>화물 정보의 CGO#, CHRTR / RCVR, 화물명, 수량, BERTH, COASTER를 자동 반영합니다.</p></div><button id="proforma-print" class="primary">인쇄 / PDF 저장</button></div><section id="proforma-sheet" class="proforma-sheet"><h4>${esc(proformaHeading())}</h4><div class="detail-table-scroll"><table class="proforma-table"><thead><tr><th>CGO#</th><th>CHRTR/RCVR</th><th>CGO NAME</th><th>Q'TY</th><th>BERTH</th><th>COASTER</th></tr></thead><tbody>${draft.cargo.map((cargo,index)=>`<tr><td><input data-list="cargo" data-index="${index}" data-key="number" value="${esc(cargo.number)}"></td><td><input data-list="cargo" data-index="${index}" data-key="party" value="${esc(cargo.party)}"></td><td><input data-list="cargo" data-index="${index}" data-key="name" value="${esc(cargo.name)}"></td><td class="proforma-quantity">${esc(quantity(cargo.bl))}</td><td><input data-list="cargo" data-index="${index}" data-key="berth" value="${esc(proformaBerth(cargo))}" placeholder="BERTH"></td><td><input data-list="cargo" data-index="${index}" data-key="coaster" value="${esc(cargo.coaster)}" placeholder="COASTER"></td></tr>`).join('')}</tbody></table></div><p class="proforma-total">${esc(quantity(total))}</p><label class="proforma-notes"><span>NOTES / MAX DRAFT</span><textarea data-field="proformaNotes" rows="5" placeholder="예) P#42 - 10.2M&#10;JSTT#2/3 - 10.5/11.25M&#10;OTK(S) - 11.3M">${esc(draft.proformaNotes||'')}</textarea></label>${draft.cargo.length?'':'<div class="empty compact"><strong>화물 정보가 없습니다</strong>화물 정보 탭에서 VCR 표를 붙여넣거나 화물을 입력해 주세요.</div>'}</section>`;
+    return `<div class="detail-section-heading"><div><h3>PROFORMA</h3><p>화물 정보의 CGO#, CHRTR / RCVR, 화물명, 수량, BERTH, COASTER를 자동 반영합니다. 부두를 바꾸면 등록된 MAX DRAFT가 자동 입력되며 직접 수정할 수 있습니다.</p></div><button id="proforma-print" class="primary">인쇄 / PDF 저장</button></div><section id="proforma-sheet" class="proforma-sheet"><h4>${esc(proformaHeading())}</h4><div class="detail-table-scroll"><table class="proforma-table"><thead><tr><th>CGO#</th><th>CHRTR/RCVR</th><th>CGO NAME</th><th>Q'TY</th><th>BERTH</th><th>MAX DRAFT</th><th>COASTER</th></tr></thead><tbody>${draft.cargo.map((cargo,index)=>`<tr><td><input data-list="cargo" data-index="${index}" data-key="number" value="${esc(cargo.number)}"></td><td><input data-list="cargo" data-index="${index}" data-key="party" value="${esc(cargo.party)}"></td><td><input data-list="cargo" data-index="${index}" data-key="name" value="${esc(cargo.name)}"></td><td class="proforma-quantity">${esc(quantity(cargo.bl))}</td><td><input data-list="cargo" data-index="${index}" data-key="berth" value="${esc(proformaBerth(cargo))}" placeholder="BERTH"></td><td><input class="proforma-draft" data-list="cargo" data-index="${index}" data-key="maxDraft" value="${esc(proformaMaxDraft(cargo))}" placeholder="확인 필요" aria-label="MAX DRAFT ${index+1}"></td><td><input data-list="cargo" data-index="${index}" data-key="coaster" value="${esc(cargo.coaster)}" placeholder="COASTER"></td></tr>`).join('')}</tbody></table></div><p class="proforma-total">${esc(quantity(total))}</p><label class="proforma-notes"><span>NOTES</span><textarea data-field="proformaNotes" rows="5" placeholder="PROFORMA 관련 특이사항을 기록하세요.">${esc(draft.proformaNotes||'')}</textarea></label>${draft.cargo.length?'':'<div class="empty compact"><strong>화물 정보가 없습니다</strong>화물 정보 탭에서 VCR 표를 붙여넣거나 화물을 입력해 주세요.</div>'}</section>`;
   }
   function printProforma() {
     const table=$('#proforma-sheet');if(!table)return;
@@ -82,7 +86,7 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     const printable=table.cloneNode(true);
     printable.querySelectorAll('input').forEach(input=>{const value=document.createElement('span');value.textContent=input.value;input.replaceWith(value);});
     printable.querySelectorAll('textarea').forEach(input=>{const value=document.createElement('div');value.textContent=input.value;input.replaceWith(value);});
-    popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>PROFORMA</title><style>body{margin:42px;font:12px Arial,sans-serif;color:#111}h4{font-size:16px;margin:0 0 18px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:14px 8px;text-align:center}th{background:#91bfee;font-weight:500;height:72px}td:nth-child(2),td:nth-child(3){text-align:left}td span{display:block;min-height:15px}.proforma-quantity{text-align:right}.proforma-total{text-align:right;font:14px ui-monospace,monospace;letter-spacing:2px;margin:18px 18% 68px 0}.proforma-notes{white-space:pre-line;line-height:2.8;font-family:ui-monospace,monospace}.proforma-notes span{display:none}</style></head><body>${printable.outerHTML}</body></html>`);
+    popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>PROFORMA</title><style>body{margin:42px;font:12px Arial,sans-serif;color:#111}h4{font-size:16px;margin:0 0 18px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:14px 8px;text-align:center}th{background:#91bfee;font-weight:500;height:72px}td:nth-child(2),td:nth-child(3){text-align:left}td span{display:block;min-height:15px}.proforma-quantity{text-align:right}.proforma-draft{text-align:center}.proforma-total{text-align:right;font:14px ui-monospace,monospace;letter-spacing:2px;margin:18px 18% 68px 0}.proforma-notes{white-space:pre-line;line-height:2.8;font-family:ui-monospace,monospace}.proforma-notes span{display:none}</style></head><body>${printable.outerHTML}</body></html>`);
     popup.document.close();popup.focus();popup.print();
   }
   function renderPanel() {
@@ -103,7 +107,7 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     draft=original?structuredClone(original):blankCall(crypto.randomUUID());
     if(typeof draft.vcrFileName!=='string')draft.vcrFileName='';
     if(typeof draft.proformaNotes!=='string')draft.proformaNotes='';
-    draft.cargo=draft.cargo.map(cargo=>({...cargo,berth:typeof cargo.berth==='string'?cargo.berth:proformaBerth(cargo),coaster:typeof cargo.coaster==='string'?cargo.coaster:''}));
+    draft.cargo=draft.cargo.map(cargo=>({...cargo,berth:typeof cargo.berth==='string'?cargo.berth:proformaBerth(cargo),maxDraft:typeof cargo.maxDraft==='string'?cargo.maxDraft:'',coaster:typeof cargo.coaster==='string'?cargo.coaster:''}));
     dirty=!original;tab='overview';
     dialog.innerHTML=`<header class="detail-header"><div><p class="eyebrow">VESSEL WORKSPACE <span> / ${esc(draft.port)}</span></p><h2>${esc(draft.vessel)||'새 선박 일정'} <small>/ ${esc(draft.voyage)||'NEW PORT CALL'}</small></h2><p><span class="detail-pic">${esc(draft.pic)||'PIC 미배정'}</span><span>${esc(draft.etaRaw)||'ETA 입력 필요'}</span><span class="status-tag ${draft.status.toLowerCase()}">${esc(draft.status)}</span></p></div><button id="close-vessel" class="icon-button" aria-label="선박 상세 닫기">×</button></header><nav class="detail-tabs" aria-label="선박 업무 탭">${tabLabels.map(([key,label])=>`<button data-tab="${key}" class="${key===tab?'active':''}">${label}</button>`).join('')}</nav><div id="detail-panel" class="detail-panel"></div><footer class="detail-save"><div><strong id="save-status" role="status"></strong><small id="save-help"></small></div><div class="save-buttons"><button id="backup-draft" class="subtle">초안 백업</button><button id="reload-call" class="subtle">최신 기록</button><button id="save-call" class="primary">변경사항 저장</button></div></footer>`;
     renderPanel();updateSaveStatus();dialog.showModal();
@@ -120,7 +124,11 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     const {field,list,index,key}=event.target.dataset;
     if(!draft)return;
     if(field)draft[field]=event.target.type==='checkbox'?event.target.checked:field==='year'?Number(event.target.value):event.target.value;
-    if(list)draft[list][Number(index)][key]=event.target.type==='checkbox'?event.target.checked:event.target.value;
+    if(list){
+      const row=draft[list][Number(index)];
+      row[key]=event.target.type==='checkbox'?event.target.checked:event.target.value;
+      if(list==='cargo'&&key==='berth')row.maxDraft=maxDraftForBerth(row.berth);
+    }
     if(field||list)markDirty();
   });
   dialog.addEventListener('click',async event=>{

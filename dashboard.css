@@ -20,3 +20,4 @@ dialog{color:var(--text);background:var(--surface);border:1px solid #3a4b5a;bord
 .page-actions{display:flex;gap:9px;align-items:center}
 .eta-paste-dialog{width:min(720px,94vw);padding:25px}.eta-paste-dialog form>header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.eta-paste-dialog h2{margin:0;font-size:20px}.eta-paste-dialog p{font-size:12px;line-height:1.7;color:var(--muted);margin:17px 0 12px}.eta-paste-dialog textarea{min-height:250px;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#111d27;tab-size:4}.eta-paste-dialog .form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
 @media(max-width:760px){.page-actions{width:100%;justify-content:flex-end}.page-actions .primary,.eta-upload-control{font-size:10px;padding:9px;white-space:nowrap}}
+.proforma-table td .proforma-draft{min-width:92px;color:#173c5f;font-weight:700}
