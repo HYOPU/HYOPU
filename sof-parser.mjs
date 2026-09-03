@@ -5,7 +5,10 @@ export function normalizeReport(text) {
     .replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n)))
     .replace(/&(?:nbsp|amp|lt|gt|quot);/gi,x=>({'&nbsp;':' ','&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"'})[x.toLowerCase()])
     .replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\\([_*~<>#-])/g,'$1')
-    .replace(/[\u00A0\u2000-\u200A\u202F]/g,' ').replace(/\r\n?/g,'\n');
+    .replace(/[\u00A0\u2000-\u200A\u202F]/g,' ').replace(/\r\n?|[\u2028\u2029]/g,'\n')
+    // Email/Office wrapping can split the NOR label itself. Join only that
+    // label, not navigation lines whose independent timestamps must survive.
+    .replace(/\bN[.\s]*O[.\s]*R[.\s]+TENDER(?:ED)?\b/gi, label=>label.replace(/\s+/g,' '));
 }
 const clean = s => String(s??'').replace(/\s+/g,' ').trim();
 const pad = n => String(n).padStart(2,'0');
@@ -76,11 +79,7 @@ export function applyNorTenderedRule(report) {
     const callIndex = report.calls.findIndex(call => call.id === group.callId);
     if (callIndex < 0) continue;
     if (group.callId === firstCargoCallId) {
-      if (!group.norTendered && group.coaster?.norTendered) {
-        group.norTendered = group.coaster.norTendered;
-        group.reportedNorTendered = group.coaster.norTendered;
-      }
-      group.norTenderedExplanation = '입항 원문에 명시된 최초 NOR TENDERED';
+      group.norTenderedExplanation = `입항 원문에 명시된 최초 NOR TENDERED${group.norTendered ? ` · ${displayTime(group.norTendered)}` : ' · 확인 필요'}`;
     } else {
       let sourceCall = report.calls[callIndex - 1];
       // Use editable groups, never the stale report.cargo snapshot. If the
@@ -103,16 +102,18 @@ export function applyNorTenderedRule(report) {
         const comparable = latest.includes('T') || latest.slice(0, 2) === currentBerthAt.slice(0, 2);
         if (!sameFormat || (comparable && latest > currentBerthAt)) latest = '';
       }
-      const reportedNorTendered = group.coaster?.norTendered || group.reportedNorTendered || '';
-      group.reportedNorTendered = reportedNorTendered;
-      group.norTendered = latest || reportedNorTendered;
-      group.norTenderedAuto = Boolean(latest);
+      // A coaster's NORT belongs to that coaster, not this vessel. Missing or
+      // invalid previous cargo times cannot be replaced by a later notice.
+      group.norTendered = latest;
+      group.norTenderedAuto = true;
       group.norTenderedExplanation = latest
         ? `직전 화물 부두 ${sourceCall?.berth || '(미확인)'}의 마지막 HOSE OFF · ${displayTime(latest)}`
         : '직전 화물 부두의 HOSE OFF 확인 필요';
+      if (group.reportedNorTendered && group.reportedNorTendered !== latest) {
+        report.norWarnings.push(`${group.sheetName}: 원문 NOR ${displayTime(group.reportedNorTendered)} 별도 통지 · NOR 필드는 ${latest ? `직전 부두 HOSE OFF ${displayTime(latest)}` : '직전 부두 HOSE OFF 확인 필요'}`);
+      }
     }
     if (!group.norTendered) {
-      const reason = group.norTenderedAuto ? 'previous berth last HOSE OFF is missing, incomplete or invalid' : 'arrival NOR TENDERED not stated in source report';
       report.norWarnings.push(`${group.sheetName}: NOR TENDERED 확인 필요 (${group.norTenderedAuto ? group.norTenderedExplanation : '입항 원문 미기재'})`);
     }
   }
@@ -242,7 +243,7 @@ export function parseReport(input) {
       const norGroups=explicit.length?explicit:initial;
       for(const g of norGroups){
         if(g.callId===groups[0]?.callId&&g.reportedNorTendered){
-          if(g.reportedNorTendered!==event.at)warnings.push(`${g.sheetName}: 최초 NOR TENDERED와 이후 통지 시간이 달라 확인 필요`);
+          if(g.reportedNorTendered!==event.at)warnings.push(`${g.sheetName}: 최초 NOR TENDERED ${displayTime(g.reportedNorTendered)} 유지 · 이후 통지 ${displayTime(event.at)} 확인 필요`);
           continue;
         }
         g.norTendered=event.at;g.reportedNorTendered=event.at;

@@ -23,15 +23,17 @@ function assertNor(report, expected) {
   const workbook = read(exportSof(template, report, { DOMParser, XMLSerializer }), { type: 'array' });
   assert.equal(workbook.SheetNames.length, report.groups.length);
   for (let index = 0; index < expected.length; index++) {
-    assert.equal(workbook.Sheets[workbook.SheetNames[index]].B15?.v ?? '', displayTime(expected[index]) || 'REVIEW', `NOR TENDERED on ${workbook.SheetNames[index]}`);
+    assert.equal(workbook.Sheets[workbook.SheetNames[index]].B15?.v ?? '', displayTime(expected[index]), `NOR TENDERED on ${workbook.SheetNames[index]}`);
   }
   return workbook;
 }
 
-test('BETULA uses the immediately previous physical berth, including a no-HOSE-OFF layby', () => {
+test('BETULA skips its cargo-free layby and CTK uses the last cargo berth HOSE OFF', () => {
   const report = parseReport(fixture('betula'));
-  assertNor(report, ['2026-06-28T11:42', '2026-06-29T04:00', '2026-06-30T05:15', '']);
-  assert.ok(report.warnings.some(warning => warning.includes('CTK') && /NOR/i.test(warning)));
+  assertNor(report, ['2026-06-28T11:42', '2026-06-29T04:00', '2026-06-30T05:15', '2026-06-30T23:55']);
+  assert.ok(report.calls.some(call => call.berth === 'P#64'), 'The layby remains in the source timeline');
+  assert.ok(report.groups[3].norTenderedExplanation.includes('OTK(S)'));
+  assert.ok(!report.warnings.some(warning => warning.includes('CTK') && /NOR TENDERED/i.test(warning)));
 });
 
 test('KASHI first cargo berth retains its arrival NOR even with an earlier non-cargo layby', () => {
@@ -88,7 +90,8 @@ test('a later NOR re-notice within the first call does not replace the initial a
     ...cargo(1, '05/1730'),
   ]));
   assertNor(report, ['2026-01-05T08:00']);
-  assert.ok(report.groups[0].remarks.some(remark => /05\/1100/.test(remark) && /NOR/i.test(remark)));
+  assert.ok(report.warnings.some(warning => /05\/1100/.test(warning) && /NOR/i.test(warning)));
+  assert.ok(!report.groups[0].remarks.some(remark => /REPORTED NOR TENDERED/i.test(remark)));
 });
 
 for (const statement of [
@@ -114,7 +117,38 @@ test('LARIX arrival 19/0735 is exported and its later explicit NOR remains as so
   assert.equal(report.groups[0].norTendered, '2026-03-19T07:35');
   assert.equal(workbook.Sheets.P63.B15.v, '19/0735');
   assert.equal(workbook.Sheets['OCEAN ACE 11'].B15.v, '21/1320');
-  assert.ok(report.groups.slice(2, 5).some(group => group.remarks.some(remark => /23\/1700/.test(remark) && /NOR/i.test(remark))));
+  assert.ok(report.warnings.some(warning => /23\/1700/.test(warning) && /NOR/i.test(warning)));
+  assert.ok(report.groups.slice(2, 5).every(group => group.reportedNorTendered === '2026-03-23T17:00'));
+  assert.ok(!report.groups.flatMap(group => group.remarks).some(remark => /REPORTED NOR TENDERED/i.test(remark)));
+});
+
+test('a first-call coaster NORT never substitutes for an absent vessel arrival NOR', () => {
+  const report = parseReport(reportText([
+    '05/0800 : EOSP',
+    '05/0900 : BERTHED AT ALPHA',
+    "SBTS SIDE - 1ST COASTER 'TEST COASTER'(NORT 05/0830)",
+    ...cargo(1, '05/1730'),
+  ]));
+  assert.equal(report.groups[0].coaster.norTendered, '2026-01-05T08:30');
+  assertNor(report, ['']);
+  assert.ok(report.warnings.some(warning => /NOR TENDERED/.test(warning)));
+});
+
+test('missing or invalid previous HOSE OFF never falls back to coaster NORT or a later vessel notice', () => {
+  for (const hoseOff of ['', '2026-03-21T25:00']) {
+    const report = parseReport(fixture('larix'));
+    report.groups[1].cargo[0].hoseOff = hoseOff;
+    parser.applyNorTenderedRule(report);
+    assert.ok(report.groups.slice(2, 5).every(group => group.coaster.norTendered));
+    assertNor(report, [
+      '2026-03-19T07:35', '2026-03-20T16:00', '', '', '',
+      '2026-03-25T14:45', '2026-03-26T04:40', '2026-03-27T07:40',
+    ]);
+    for (const group of report.groups.slice(2, 5)) {
+      assert.equal(group.reportedNorTendered, '2026-03-23T17:00');
+      assert.ok(report.warnings.some(warning => warning.includes(group.sheetName) && /HOSE OFF/.test(warning)));
+    }
+  }
 });
 
 test('an immediate previous berth with unknown HOSE OFF never falls back to an older cargo berth', () => {
@@ -140,7 +174,7 @@ test('a partly missing previous-call HOSE OFF is reviewed rather than assumed ea
   assertNor(report, ['2026-01-05T08:00', '']);
 });
 
-test('a physical berth with no cargo still breaks the previous-berth chain', () => {
+test('a cargo-free physical layby is skipped without losing the prior cargo berth NOR source', () => {
   const report = parseReport(reportText([
     '05/0800 : EOSP & NOR TENDERED',
     '05/0900 : BERTHED AT ALPHA', ...cargo(1, '05/1730'),
@@ -150,7 +184,8 @@ test('a physical berth with no cargo still breaks the previous-berth chain', () 
     '05/2100 : BERTHED AT GAMMA', ...cargo(3, '05/2330'),
   ]));
   assert.equal(report.groups.length, 2);
-  assertNor(report, ['2026-01-05T08:00', '']);
+  assert.equal(report.calls.length, 3);
+  assertNor(report, ['2026-01-05T08:00', '2026-01-05T17:30']);
 });
 
 test('revisiting the same berth remains a separate physical call', () => {
@@ -211,7 +246,7 @@ test('review edits, cargo additions/deletions and row order recompute NOR from t
   assert.equal(report.groups[1].norTendered, '2026-06-29T05:00');
   previous.cargo.splice(previous.cargo.findIndex(c => c.id === 'added-test-cargo'), 1);
   parser.applyNorTenderedRule(report);
-  assertNor(report, ['2026-06-28T11:42', '2026-06-29T04:15', '2026-06-30T05:15', '']);
+  assertNor(report, ['2026-06-28T11:42', '2026-06-29T04:15', '2026-06-30T05:15', '2026-06-30T23:55']);
 });
 
 test('editing one coaster HOSE OFF updates only the next physical berth NOR, not sibling coasters', () => {
@@ -243,7 +278,7 @@ test('invalid or chronologically impossible edited HOSE OFF stays blank for revi
     assert.equal(report.groups[1].norTendered, '', value);
     assert.ok(report.warnings.some(warning => warning.includes('JSTT3') && /NOR TENDERED/.test(warning)), value);
     const workbook = read(exportSof(template, report, { DOMParser, XMLSerializer }), { type: 'array' });
-    assert.equal(workbook.Sheets.JSTT3.B15.v, 'REVIEW', value);
+    assert.equal(workbook.Sheets.JSTT3.B15?.v ?? '', '', value);
   }
 });
 

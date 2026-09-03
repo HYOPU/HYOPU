@@ -273,6 +273,27 @@ test('arrival NOR TENDER without ED is visible in the real app and downloaded fi
   assert.equal(workbook.Sheets['OCEAN ACE 11'].B15.v, '21/1320');
 });
 
+for (const [name, expected] of [
+  ['larix', ['19/0735','20/1600','21/1320','21/1320','21/1320','25/1445','26/0440','27/0740']],
+  ['kashi', ['05/0048']],
+  ['betula', ['28/1142','29/0400','30/0515','30/2355']],
+]) {
+  for (const wrapped of [false, true]) {
+    test(`${name}: fresh email analysis and downloaded NOR values survive ${wrapped ? 'Office label wrapping' : 'original source'}`, async () => {
+      const app = createApp();
+      let raw = fixture(name);
+      if (wrapped) raw = raw.replaceAll('NOR TENDERED', 'NOR\r\n&#x20;  TENDERED').replaceAll('\n', '\u2028');
+      await app.paste(raw);
+      assert.deepEqual(expected.map((_, index) => norInput(app, index).value), expected);
+      assert.match(app.get('status').textContent, new RegExp(`NOR TENDERED ${expected.length}/${expected.length}개 확인`));
+      await app.get('download').click();
+      const workbook = await downloadedWorkbook(app);
+      assert.deepEqual(workbook.SheetNames.map(sheet => workbook.Sheets[sheet].B15?.v ?? ''), expected);
+      assert.equal(app.errors.length, 0);
+    });
+  }
+}
+
 test('editing the previous berth HOSE OFF updates NOR inputs in place and the downloaded B15', async () => {
   const app = createApp();
   await app.paste(fixture('betula'));
@@ -288,7 +309,7 @@ test('editing the previous berth HOSE OFF updates NOR inputs in place and the do
   const workbook = await downloadedWorkbook(app);
   assert.equal(workbook.Sheets.JSTT3.B15.v, '29/0430');
   assert.equal(workbook.Sheets['OTK(S)'].B15.v, '30/0515');
-  assert.equal(workbook.Sheets.CTK.B15?.v ?? '', '');
+  assert.equal(workbook.Sheets.CTK.B15?.v ?? '', '30/2355');
 });
 
 test('correcting an incomplete previous HOSE OFF refreshes NOR review notes without adding a remark', async () => {
