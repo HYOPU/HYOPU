@@ -30,6 +30,16 @@ test('in-port carries from August through ETD; other vessel visits stay separate
   assert.ok(!callsOnDay(calls,'2026-09-04').some(c=>c.id===calls[0].id));
   assert.equal(calls.filter(c=>matchesFilters(c,{pic:'JAE LEE',port:'DAESAN',query:'renge'})).length,1);
 });
+test('calendar orders each day by ETA, then uses AM/PM and vessel names as stable fallbacks',()=>{
+  const day='2026-09-05';
+  const sample=[
+    {...calls[0],id:'late',vessel:'LATE',etaRaw:'09/05 PM',status:'PRE-ARRIVAL'},
+    {...calls[0],id:'early',vessel:'EARLY',etaRaw:'09/05 0700',status:'PRE-ARRIVAL'},
+    {...calls[0],id:'unknown',vessel:'UNKNOWN',etaRaw:'09/05',status:'PRE-ARRIVAL'},
+    {...calls[0],id:'middle',vessel:'MIDDLE',etaRaw:'09/05 AM',status:'PRE-ARRIVAL'},
+  ];
+  assert.deepEqual(callsOnDay(sample,day).map(call=>call.id),['early','middle','late','unknown']);
+});
 test('all reference calls and genuine parser snapshots pass server validation',()=>{
   for(const call of calls)assert.equal(validation.validateCall(call),null);
   for(const name of ['betula','kashi','larix']){const report=parseReport(fs.readFileSync(new URL(`fixtures/${name}.txt`,import.meta.url),'utf8'));assert.ok(validation.validSof(report),name);}

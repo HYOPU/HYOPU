@@ -27,9 +27,20 @@ export function matchesFilters(call, { pic = '', port = '', query = '' } = {}) {
 }
 const koreaToday = () => new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export function callsOnDay(calls, day, today = koreaToday()) {
+  const timeValue = call => {
+    const eta = parseEta(call.etaRaw, call.year);
+    if (eta.time) return Number(eta.time.replace(':', ''));
+    if (eta.period === 'AM') return 900;
+    if (eta.period === 'PM') return 1700;
+    return 9999;
+  };
   return calls.filter(call => {
     const eta = parseEta(call.etaRaw, call.year).date, etd = parseEta(call.etdRaw, call.year).date;
     return eta === day || Boolean(call.status === 'INPORT' && eta && eta < day && day <= (etd || today));
+  }).sort((left, right) => {
+    const leftEta = parseEta(left.etaRaw, left.year).date;
+    const rightEta = parseEta(right.etaRaw, right.year).date;
+    return leftEta.localeCompare(rightEta) || timeValue(left) - timeValue(right) || left.vessel.localeCompare(right.vessel) || left.voyage.localeCompare(right.voyage);
   });
 }
 export function inMonth(call, month, today = koreaToday()) {

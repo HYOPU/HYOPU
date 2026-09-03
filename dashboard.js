@@ -51,29 +51,6 @@ async function api(path, options={}) {
   if(!result.ok)throw new Error(body.error||'요청을 완료하지 못했습니다.');
   return body;
 }
-function fileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('파일을 읽지 못했습니다. 다시 선택해 주세요.'));
-    reader.onload = () => resolve(String(reader.result).split(',', 2)[1] || '');
-    reader.readAsDataURL(file);
-  });
-}
-async function importEtaWorkbook(file) {
-  if (!file) return;
-  if (!/\.xlsx$/i.test(file.name) || file.size > 10 * 1024 * 1024) throw new Error('10MB 이하의 KOREA ETA UPDATE .xlsx 파일을 선택해 주세요.');
-  const control = $('#eta-upload-file');
-  control.disabled = true;
-  try {
-    showToast('ETA 원본을 확인하고 공유 일정에 반영하는 중입니다…');
-    const result = await api('/api/eta-upload', { method: 'POST', body: JSON.stringify({ $content: await fileAsBase64(file) }) });
-    await loadCalls();
-    showToast(`ETA 반영 완료 · 원본 ${result.sourceRows ?? 0}건 / 변경 ${result.changed ?? 0}건`);
-  } finally {
-    control.disabled = false;
-    control.value = '';
-  }
-}
 async function importEtaClipboard() {
   const input = $('#eta-paste-text');
   const text = input.value;
@@ -106,7 +83,6 @@ const workspace=createVesselWorkspace({
 });
 function openCall(id) { workspace.open(id); }
 $('#new-call').onclick=()=>workspace.open();
-$('#eta-upload-file').onchange=event=>importEtaWorkbook(event.target.files?.[0]).catch(error=>showToast(error.message));
 $('#eta-paste-open').onclick=()=>$('#eta-paste-dialog').showModal();
 $('#eta-paste-import').onclick=()=>importEtaClipboard().catch(error=>showToast(error.message));
 let toastTimer;
