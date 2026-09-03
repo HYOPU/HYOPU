@@ -1,0 +1,2 @@
+/* Browser-native selects need an explicit surface after the legacy dark theme. */
+.filter-label select { background: #fafcfb !important; color: var(--ui-ink) !important; }
