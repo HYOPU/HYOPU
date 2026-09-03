@@ -1,5 +1,5 @@
 export const PICS = ['DENNIS', 'JAE LEE', 'JACK', 'RICK'];
-export const PORTS = ['ULSAN', "P'TAEK", 'YOSU', 'DAESAN', 'DONGHAE'];
+export const PORTS = ['ULSAN', "P'TAEK", 'YOSU', 'DAESAN', 'DONGHAE', 'INCHEON', 'KUNSAN'];
 export const STATUSES = ['PRE-ARRIVAL', 'INPORT', 'DEPARTED'];
 export function parseEta(raw, year = 2026) {
   const match = String(raw || '').match(/^(\d{1,2})\/(\d{1,2})(?:\s+(\d{4}|AM|PM))?(\?\?)?$/i);
