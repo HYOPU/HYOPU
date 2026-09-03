@@ -6,6 +6,12 @@ import { exportSof } from './sof-export.mjs';
 const $ = selector => document.querySelector(selector);
 let state = null;
 let workspaceContext = null;
+function applyWorkspaceFields(report) {
+  const context = workspaceContext?.fields;
+  if (!context) return report;
+  for (const key of ['vessel', 'voyage', 'port']) if (context[key]) report.fields[key] = context[key];
+  return report;
+}
 function publishSof() {
   if (workspaceContext && typeof window !== 'undefined') window.parent.postMessage({type:'hyopu:sof-state',callId:workspaceContext.callId,report:state,raw:$('#report-text').value},location.origin);
 }
@@ -28,7 +34,7 @@ const hasCargo = () => Boolean(state?.groups.some(group => group.cargo.length));
 const status = message => { $('#status').textContent = message; };
 
 function showReport(report, name) {
-  state = report;
+  state = applyWorkspaceFields(report);
   $('#file-name').textContent = name;
   $('#upload-panel').classList.add('hidden');
   $('#review-panel').classList.remove('hidden');
@@ -180,7 +186,7 @@ if (typeof window !== 'undefined' && window.parent && window.parent !== window) 
   $('#report-text').addEventListener('input',()=>{if(workspaceContext)window.parent.postMessage({type:'hyopu:sof-raw',callId:workspaceContext.callId,raw:$('#report-text').value},location.origin);});
   window.addEventListener('message', event => {
     if(event.origin!==location.origin||event.source!==window.parent||event.data?.type!=='hyopu:sof-context')return;
-    workspaceContext={callId:event.data.callId};
+    workspaceContext={callId:event.data.callId,fields:event.data.fields||{}};
     const context=event.data.fields||{};
     const heading=document.querySelector('.hero .lede');
     if(heading)heading.textContent=`${context.vessel||''} / ${context.voyage||''} / ${context.port||''} · 현재 입항 건의 SOF 작업`;

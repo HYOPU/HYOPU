@@ -1,13 +1,12 @@
 import { PICS, PORTS, STATUSES, blankCall } from './operations-model.mjs';
+import { parseVcrWorkbook, vesselNameForSof } from './vcr-parser.mjs';
 import validation from './lib/call-validation.js';
 const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const definitions = {
-  activities: [['done','완료','checkbox'],['time','일시 (LT)','datetime-local'],['activity','ACTIVITY'],['company','업체 · 담당'],['note','메모']],
   cargo: [['operation','작업','operation'],['number','CGO #'],['name','화물명'],['bl','B/L FIG (MT)'],['ship','SHIP FIG (MT)'],['tanks','탱크'],['party','SHIPPER / CONSIGNEE'],['note','메모']],
-  crew: [['kind','구분','crew-kind'],['name','성명 · 직책'],['schedule','항공 · 이동 일정'],['status','처리 상태'],['note','메모']],
   tasks: [['done','완료','checkbox'],['text','할 일'],['due','기한','date']],
 };
-const tabLabels = [['overview','입항 정보'],['activities','ACTIVITY'],['cargo','화물 정보'],['crew','선원 교대'],['tasks','TO DO'],['reports','리포트'],['sof','SOF 자동화']];
+const tabLabels = [['overview','입항 정보'],['activities','ACTIVITY'],['cargo','화물 정보'],['tasks','TO DO'],['reports','리포트'],['sof','SOF 자동화']];
 const options = (values, selected, empty=false) => `${empty?'<option value="">미배정</option>':''}${values.map(value=>`<option value="${esc(value)}" ${value===selected?'selected':''}>${esc(value)}</option>`).join('')}`;
 function confirmAction(message) {
   return new Promise(resolve=>{
@@ -57,15 +56,16 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
   }
   function renderRows(key) {
     const fields=definitions[key];
-    return `<div class="detail-section-heading"><div><h3>${tabLabels.find(([name])=>name===key)[1]}</h3><p>${key==='cargo'?'BL과 SHIP FIG는 별개입니다. 미기재 값은 빈칸으로 두세요.':key==='crew'?'이 입항 건에 필요한 최소한의 정보만 기록해 주세요.':'추가한 내용은 하단의 변경사항 저장을 눌러 저장합니다.'}</p></div><button class="subtle" data-add-row="${key}">＋ 행 추가</button></div><div class="detail-table-scroll"><table class="detail-table"><thead><tr>${fields.map(([,label])=>`<th>${label}</th>`).join('')}<th></th></tr></thead><tbody>${draft[key].map((row,i)=>`<tr>${fields.map(([name,label,type])=>`<td>${type==='checkbox'?`<input type="checkbox" data-list="${key}" data-index="${i}" data-key="${name}" aria-label="${label} ${i+1}" ${row[name]?'checked':''}>`:type==='operation'||type==='crew-kind'?`<select data-list="${key}" data-index="${i}" data-key="${name}" aria-label="${label} ${i+1}">${options(type==='operation'?['','LOAD','DISCH']:['ON-SIGNER','OFF-SIGNER','승선자 · 감독'],row[name])}</select>`:`<input type="${type||'text'}" data-list="${key}" data-index="${i}" data-key="${name}" aria-label="${label} ${i+1}" value="${esc(row[name])}" ${name==='bl'||name==='ship'?'inputmode="decimal" placeholder="미기재"':''}>`}</td>`).join('')}<td><button class="remove-row" data-remove-row="${key}" data-index="${i}" aria-label="${i+1}행 삭제">×</button></td></tr>`).join('')}</tbody></table></div>${!draft[key].length?'<div class="empty compact"><strong>아직 기록이 없습니다</strong>행 추가를 눌러 첫 기록을 작성하세요.</div>':''}`;
+    return `<div class="detail-section-heading"><div><h3>${tabLabels.find(([name])=>name===key)[1]}</h3><p>${key==='cargo'?'BL과 SHIP FIG는 별개입니다. 미기재 값은 빈칸으로 두세요.':'추가한 내용은 하단의 변경사항 저장을 눌러 저장합니다.'}</p></div><button class="subtle" data-add-row="${key}">＋ 행 추가</button></div><div class="detail-table-scroll"><table class="detail-table"><thead><tr>${fields.map(([,label])=>`<th>${label}</th>`).join('')}<th></th></tr></thead><tbody>${draft[key].map((row,i)=>`<tr>${fields.map(([name,label,type])=>`<td>${type==='checkbox'?`<input type="checkbox" data-list="${key}" data-index="${i}" data-key="${name}" aria-label="${label} ${i+1}" ${row[name]?'checked':''}>`:type==='operation'?`<select data-list="${key}" data-index="${i}" data-key="${name}" aria-label="${label} ${i+1}">${options(['','LOAD','DISCH'],row[name])}</select>`:`<input type="${type||'text'}" data-list="${key}" data-index="${i}" data-key="${name}" aria-label="${label} ${i+1}" value="${esc(row[name])}" ${name==='bl'||name==='ship'?'inputmode="decimal" placeholder="미기재"':''}>`}</td>`).join('')}<td><button class="remove-row" data-remove-row="${key}" data-index="${i}" aria-label="${i+1}행 삭제">×</button></td></tr>`).join('')}</tbody></table></div>${!draft[key].length?'<div class="empty compact"><strong>아직 기록이 없습니다</strong>행 추가를 눌러 첫 기록을 작성하세요.</div>':''}`;
   }
   function renderPanel() {
     let content='';
     if(tab==='overview') content=`<div class="detail-section-heading"><div><h3>Port call details</h3><p>같은 선박·항차라도 항만별 업무 기록은 독립적으로 관리합니다.</p></div></div><div class="detail-grid">${field('vessel','VESSEL')}${field('voyage','VOYAGE')}${field('port','PORT','text',PORTS)}${field('pic','담당자 · PIC','text',PICS)}${field('year','기준 연도','number')}${field('etaRaw','ETA / ARRIVED (LT)')}${field('etdRaw','ETD (LT)')}${field('status','현재 상태','text',STATUSES)}</div><p class="field-hint">일시 표기: MM/DD HHmm · AM/PM · ?? 유지 / 시각 미정은 날짜만 입력</p><div class="note-heading"><h3>업무 메모</h3><span>THIS PORT CALL ONLY</span></div><textarea data-field="notes" rows="8" placeholder="접안 계획, 주의사항, 인계할 내용 등을 자유롭게 기록하세요.">${esc(draft.notes)}</textarea>`;
+    else if(tab==='activities') content=`<div class="detail-section-heading"><div><h3>ACTIVITY 메모</h3><p>시간순 기록, 전달 사항, 확인 내용을 자유롭게 작성하세요. 입력 후 자동 저장됩니다.</p></div></div><textarea class="activity-notepad" data-field="activityNotes" rows="18" placeholder="예) 09/03 0900 · Terminal confirmed loading window&#10;예) 09/03 1030 · Cargo document received">${esc(draft.activityNotes)}</textarea>`;
+    else if(tab==='cargo') content=`<div class="detail-section-heading"><div><h3>VCR · Voyage Cargo Report</h3><p>VCR XLSX를 올리면 이 입항 항만(${esc(draft.port)})의 적재 화물을 아래 표에 반영합니다.</p></div><label class="subtle file-label">VCR 불러오기<input id="vcr-file" type="file" accept=".xlsx,.xls" hidden></label></div>${draft.vcrFileName?`<p class="field-hint">최근 VCR: ${esc(draft.vcrFileName)}</p>`:''}${draft.sof?'<button id="import-sof-cargo" class="subtle" style="margin-bottom:16px">SOF 분석 화물 가져오기</button>':''}${renderRows('cargo')}`;
     else if(definitions[tab]) content=renderRows(tab);
     else if(tab==='reports') content=`<div class="detail-section-heading"><div><h3>최신 리포트</h3><p>수신한 리포트를 붙여넣고, SOF 탭에서 분석을 이어가세요.</p></div><label class="subtle file-label">TXT 불러오기<input id="latest-report-file" type="file" accept=".txt,text/plain" hidden></label></div><div class="detail-grid three">${field('reportType','REPORT 종류')}${field('reportReceived','수신 일시 (LT)','datetime-local')}<label class="report-check"><input type="checkbox" data-field="reportChecked" ${draft.reportChecked?'checked':''}>REPORT 확인 완료</label></div><textarea data-field="latestReport" rows="14" placeholder="운항 리포트 원문을 붙여넣어 주세요. 이메일 수신자·서명 등 불필요한 개인정보는 제거해 주세요.">${esc(draft.latestReport)}</textarea><button class="primary report-to-sof" data-tab="sof">이 리포트로 SOF 작업하기 ↗</button>`;
     else content=`<div class="detail-section-heading"><div><h3>SOF automation</h3><p>협운해운 원본 로고·폰트·서식과 기존 NOR / BL / SHIP 분석을 그대로 사용합니다.</p></div>${draft.sof?'<span class="status-tag inport">분석 기록 연결됨</span>':''}</div><p id="sof-link-status" class="sof-link-status">리포트 분석 후 이 선박·항차·항만과 일치하는 결과만 연결합니다.</p><iframe id="sof-frame" title="선박별 SOF 자동화" src="/sof.html?embedded=1"></iframe>`;
-    if(tab==='cargo'&&draft.sof)content=`<button id="import-sof-cargo" class="subtle" style="margin-bottom:16px">SOF 분석 화물 가져오기</button>${content}`;
     $('#detail-panel').innerHTML=content;
     dialog.querySelectorAll('[data-tab]').forEach(button=>button.classList.toggle('active',button.dataset.tab===tab));
   }
@@ -75,6 +75,8 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     opener=document.activeElement;
     original=id?getCall(id):null;
     draft=original?structuredClone(original):blankCall(crypto.randomUUID());
+    if(typeof draft.activityNotes!=='string')draft.activityNotes=(draft.activities||[]).map(row=>[row.time,row.activity,row.company,row.note].filter(Boolean).join(' · ')).filter(Boolean).join('\n');
+    if(typeof draft.vcrFileName!=='string')draft.vcrFileName='';
     dirty=!original;tab='overview';
     dialog.innerHTML=`<header class="detail-header"><div><p class="eyebrow">VESSEL WORKSPACE <span> / ${esc(draft.port)}</span></p><h2>${esc(draft.vessel)||'새 선박 일정'} <small>/ ${esc(draft.voyage)||'NEW PORT CALL'}</small></h2><p><span class="detail-pic">${esc(draft.pic)||'PIC 미배정'}</span><span>${esc(draft.etaRaw)||'ETA 입력 필요'}</span><span class="status-tag ${draft.status.toLowerCase()}">${esc(draft.status)}</span></p></div><button id="close-vessel" class="icon-button" aria-label="선박 상세 닫기">×</button></header><nav class="detail-tabs" aria-label="선박 업무 탭">${tabLabels.map(([key,label])=>`<button data-tab="${key}" class="${key===tab?'active':''}">${label}</button>`).join('')}</nav><div id="detail-panel" class="detail-panel"></div><footer class="detail-save"><div><strong id="save-status" role="status"></strong><small id="save-help"></small></div><div class="save-buttons"><button id="backup-draft" class="subtle">초안 백업</button><button id="reload-call" class="subtle">최신 기록</button><button id="save-call" class="primary">변경사항 저장</button></div></footer>`;
     renderPanel();updateSaveStatus();dialog.showModal();
@@ -95,11 +97,15 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     if(field||list)markDirty();
   });
   dialog.addEventListener('change',async event=>{
-    if(event.target.id!=='latest-report-file'||!draft||busy)return;
+    if(!['latest-report-file','vcr-file'].includes(event.target.id)||!draft||busy)return;
     const file=event.target.files[0];if(!file)return;
-    if(file.size>50000){updateSaveStatus('원문은 50KB 이하로 입력해 주세요.');return;}
-    const ticket=generation,callId=draft.id;busy=true;updateSaveStatus('원문을 불러오는 중…');
-    try{const raw=await file.text();if(ticket!==generation||draft?.id!==callId)return;draft.latestReport=raw;markDirty();renderPanel();}catch{if(ticket===generation)updateSaveStatus('파일을 읽지 못했습니다.');}finally{if(ticket===generation){busy=false;updateSaveStatus();}}
+    if(event.target.id==='latest-report-file'&&file.size>50000){updateSaveStatus('원문은 50KB 이하로 입력해 주세요.');return;}
+    if(event.target.id==='vcr-file'&&file.size>20*1024*1024){updateSaveStatus('VCR 파일은 20MB 이하로 올려 주세요.');return;}
+    const ticket=generation,callId=draft.id;busy=true;updateSaveStatus(event.target.id==='vcr-file'?'VCR를 읽는 중…':'원문을 불러오는 중…');
+    try{
+      if(event.target.id==='latest-report-file'){const raw=await file.text();if(ticket!==generation||draft?.id!==callId)return;draft.latestReport=raw;markDirty();renderPanel();}
+      else {const {read,utils}=await import('xlsx');const cargo=parseVcrWorkbook(read(await file.arrayBuffer(),{type:'array',cellDates:false}),sheet=>utils.sheet_to_json(sheet,{header:1,defval:'',raw:false}),{port:draft.port});if(ticket!==generation||draft?.id!==callId)return;if(draft.cargo.length&&!await confirmDiscard(`현재 화물 ${draft.cargo.length}건을 VCR 화물 ${cargo.length}건으로 바꿀까요?`))return;draft.cargo=cargo;draft.vcrFileName=file.name;markDirty();renderPanel();updateSaveStatus(`VCR 화물 ${cargo.length}건을 반영했습니다.`);}
+    }catch(error){if(ticket===generation)updateSaveStatus(`파일을 읽지 못했습니다: ${error.message||'형식을 확인해 주세요.'}`);}finally{event.target.value='';if(ticket===generation){busy=false;const message=$('#save-status').textContent;updateSaveStatus(message);}}
   });
   dialog.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button||!draft||busy)return;
@@ -120,7 +126,7 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
   const normalize=value=>String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   window.addEventListener('message',event=>{
     const frame=$('#sof-frame');if(!draft||!frame||busy||event.origin!==location.origin||event.source!==frame.contentWindow)return;
-    if(event.data?.type==='hyopu:sof-ready')frame.contentWindow.postMessage({type:'hyopu:sof-context',callId:draft.id,report:startNewSof?null:draft.sof,raw:draft.latestReport,fields:{vessel:draft.vessel,voyage:draft.voyage,port:draft.port}},location.origin);
+    if(event.data?.type==='hyopu:sof-ready')frame.contentWindow.postMessage({type:'hyopu:sof-context',callId:draft.id,report:startNewSof?null:draft.sof,raw:draft.latestReport,fields:{vessel:vesselNameForSof(draft.vessel),voyage:draft.voyage,port:draft.port}},location.origin);
     if(event.data?.type==='hyopu:sof-raw'&&event.data.callId===draft.id&&typeof event.data.raw==='string'){draft.latestReport=event.data.raw;startNewSof=true;markDirty();}
     if(event.data?.type==='hyopu:sof-state'&&event.data.callId===draft.id){
       const report=event.data.report;
