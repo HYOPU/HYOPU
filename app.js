@@ -32,7 +32,8 @@ function showReport(report, name) {
   $('#file-name').textContent = name;
   $('#upload-panel').classList.add('hidden');
   $('#review-panel').classList.remove('hidden');
-  status(report.groups.length ? '분석 완료. 원문에 없는 값은 빈칸 또는 REVIEW로 표시됩니다.' : '화물을 찾지 못했습니다. 리포트 수정으로 돌아가 입력 내용을 확인해 주세요.');
+  const norCount = report.groups.filter(group => group.norTendered).length;
+  status(report.groups.length ? `분석 완료 · NOR TENDERED ${norCount}/${report.groups.length}개 확인. 각 작업 시트의 NOR 필드에서 시간과 근거를 확인하세요. NOR ACCEPTED는 별도 항목이며 원문 미기재 시 빈칸입니다.` : '화물을 찾지 못했습니다. 리포트 수정으로 돌아가 입력 내용을 확인해 주세요.');
   render();
 }
 

@@ -15,6 +15,7 @@ test('BETULA: four cargo berths, seven cargos, source values take priority',()=>
  assert.equal(r.cargo.find(c=>c.number==='390').completed,'2026-06-29T18:45');assert.equal(r.cargo.find(c=>c.number==='310').bl,1000.278);assert.equal(r.cargo.find(c=>c.number==='315').name,'NORMAL PARAFFIN C10-13');
  assert.equal(r.groups[2].leftBerth,'2026-07-01T02:44');assert.equal(r.groups[3].pilotIn,'2026-07-02T02:15');assert.equal(r.groups[3].cargo[0].hoseOn,'2026-07-02T06:00');
  assert.equal(r.groups[0].norTendered,'2026-06-28T11:42');assert.ok(r.groups.every(g=>g.norAccepted===''));assert.equal(r.groups[1].norTendered,'2026-06-29T04:00');
+ assert.equal(r.groups[3].norTendered,'2026-06-30T23:55');
  assert.equal(r.groups[1].tanksInspected,'SEE REMARK');assert.ok(r.groups[3].remarks.some(x=>x.includes('30/2355~02/0215')));
 });
 test('KASHI: PACS voyage, discharge table without slash or SHIP FIG, layby excluded',()=>{
@@ -43,7 +44,7 @@ for(const name of ['betula','kashi','larix'])test(`${name}: XLSX round trip, lay
  const report=parse(name),bytes=exportSof(template,report,{DOMParser,XMLSerializer});const wb=read(bytes,{type:'array',cellStyles:true});const zip=unzipSync(bytes);
  assert.equal(wb.SheetNames.length,report.groups.length);
  for(let i=0;i<report.groups.length;i++){
-  const s=wb.Sheets[wb.SheetNames[i]],g=report.groups[i];assert.equal(s.B6.v,`M/T ${report.fields.vessel}`);assert.equal(s.G6.v,report.fields.voyage);assert.equal(s.G14.v,g.berth);assert.equal(s.G21.v,g.operation);assert.equal(s.B16.v,'REVIEW');assert.ok(s['!merges'].some(m=>utils.encode_range(m)==='A2:P3'));
+  const s=wb.Sheets[wb.SheetNames[i]],g=report.groups[i];assert.equal(s.B6.v,`M/T ${report.fields.vessel}`);assert.equal(s.G6.v,report.fields.voyage);assert.equal(s.G14.v,g.berth);assert.equal(s.G21.v,g.operation);assert.equal(s.B16?.v??'','');assert.ok(s['!merges'].some(m=>utils.encode_range(m)==='A2:P3'));
   g.cargo.forEach((c,j)=>{const row=22+j*2;assert.equal(s[`A${row}`].v,Number(c.number));assert.equal(s[`A${row+1}`].v,c.name);assert.equal(s[`N${row}`]?.v??null,c.bl);if(c.bl!==null)assert.equal(s[`N${row}`].t,'n');});
   assert.match(strFromU8(zip[`xl/worksheets/sheet${i+1}.xml`]),/fitToPage="1"/);
   assert.ok(zip[`xl/worksheets/_rels/sheet${i+1}.xml.rels`]);
