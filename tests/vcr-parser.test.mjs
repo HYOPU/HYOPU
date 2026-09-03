@@ -14,6 +14,7 @@ test('VCR loading schedule updates only the current port cargo rows', () => {
   const cargo = parseVcrRows(rows, { port: 'ULSAN' });
   assert.deepEqual(cargo.map(item => [item.number,item.name,item.bl,item.tanks,item.party]), [['110','MMA','2000','12CA','OXYDE'],['145','VAM','2500.2','1P, 1S','HELM']]);
   assert.ok(cargo.every(item => item.operation === 'LOAD' && item.ship === ''));
+  assert.equal(cargo[0].berth, 'SBTS 1');
 });
 
 test('short vessel names are expanded for an embedded SOF context', () => {

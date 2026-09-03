@@ -32,7 +32,7 @@ export function parseVcrRows(rows, { port = '' } = {}) {
   const cargo = targetPort ? source.filter(item => key(item.sourcePort) === targetPort) : source;
   if (!cargo.length) throw new Error(`${port || '선택한 항만'}의 VCR 화물을 찾지 못했습니다.`);
   return cargo.map(item => ({
-    operation: 'LOAD', number: item.number, name: item.name, bl: item.bl, ship: '', tanks: item.tanks, party: item.party,
+    operation: 'LOAD', number: item.number, name: item.name, bl: item.bl, ship: '', tanks: item.tanks, party: item.party, berth: item.berth, coaster: '',
     note: `VCR · ${item.sourcePort}${item.berth ? ` / ${item.berth}` : ''}${item.discharge ? ` → ${item.discharge}` : ''}`,
   }));
 }
