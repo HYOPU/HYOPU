@@ -1,12 +1,12 @@
 import { PICS, PORTS, STATUSES, blankCall } from './operations-model.mjs';
-import { parseVcrWorkbook, vesselNameForSof } from './vcr-parser.mjs';
+import { parseVcrClipboard, vesselNameForSof } from './vcr-parser.mjs';
 import validation from './lib/call-validation.js';
 const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const definitions = {
   cargo: [['operation','작업','operation'],['number','CGO #'],['name','화물명'],['bl','B/L FIG (MT)'],['ship','SHIP FIG (MT)'],['tanks','탱크'],['party','SHIPPER / CONSIGNEE'],['note','메모']],
   tasks: [['done','완료','checkbox'],['text','할 일'],['due','기한','date']],
 };
-const tabLabels = [['overview','입항 정보'],['activities','ACTIVITY'],['cargo','화물 정보'],['tasks','TO DO'],['reports','리포트'],['sof','SOF 자동화']];
+const tabLabels = [['overview','입항 정보'],['activities','ACTIVITY'],['cargo','화물 정보'],['tasks','TO DO'],['sof','SOF 생성']];
 const options = (values, selected, empty=false) => `${empty?'<option value="">미배정</option>':''}${values.map(value=>`<option value="${esc(value)}" ${value===selected?'selected':''}>${esc(value)}</option>`).join('')}`;
 function confirmAction(message) {
   return new Promise(resolve=>{
@@ -62,10 +62,9 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     let content='';
     if(tab==='overview') content=`<div class="detail-section-heading"><div><h3>Port call details</h3><p>같은 선박·항차라도 항만별 업무 기록은 독립적으로 관리합니다.</p></div></div><div class="detail-grid">${field('vessel','VESSEL')}${field('voyage','VOYAGE')}${field('port','PORT','text',PORTS)}${field('pic','담당자 · PIC','text',PICS)}${field('year','기준 연도','number')}${field('etaRaw','ETA / ARRIVED (LT)')}${field('etdRaw','ETD (LT)')}${field('status','현재 상태','text',STATUSES)}</div><p class="field-hint">일시 표기: MM/DD HHmm · AM/PM · ?? 유지 / 시각 미정은 날짜만 입력</p><div class="note-heading"><h3>업무 메모</h3><span>THIS PORT CALL ONLY</span></div><textarea data-field="notes" rows="8" placeholder="접안 계획, 주의사항, 인계할 내용 등을 자유롭게 기록하세요.">${esc(draft.notes)}</textarea>`;
     else if(tab==='activities') content=`<div class="detail-section-heading"><div><h3>ACTIVITY 메모</h3><p>시간순 기록, 전달 사항, 확인 내용을 자유롭게 작성하세요. 입력 후 자동 저장됩니다.</p></div></div><textarea class="activity-notepad" data-field="activityNotes" rows="18" placeholder="예) 09/03 0900 · Terminal confirmed loading window&#10;예) 09/03 1030 · Cargo document received">${esc(draft.activityNotes)}</textarea>`;
-    else if(tab==='cargo') content=`<div class="detail-section-heading"><div><h3>VCR · Voyage Cargo Report</h3><p>VCR XLSX를 올리면 이 입항 항만(${esc(draft.port)})의 적재 화물을 아래 표에 반영합니다.</p></div><label class="subtle file-label">VCR 불러오기<input id="vcr-file" type="file" accept=".xlsx,.xls" hidden></label></div>${draft.vcrFileName?`<p class="field-hint">최근 VCR: ${esc(draft.vcrFileName)}</p>`:''}${draft.sof?'<button id="import-sof-cargo" class="subtle" style="margin-bottom:16px">SOF 분석 화물 가져오기</button>':''}${renderRows('cargo')}`;
+    else if(tab==='cargo') content=`<div class="detail-section-heading"><div><h3>VCR · Voyage Cargo Report</h3><p>VCR의 Load Schedule 표를 Excel에서 복사해 붙여넣으면 이 입항 항만(${esc(draft.port)})의 적재 화물을 반영합니다.</p></div></div><div class="vcr-paste"><label for="vcr-paste-text"><strong>VCR Excel 표 붙여넣기</strong><span>Load Port · Load Berth · Code · Cargo Name · Quantity (MT) · Charterer · Tanks 열을 포함해 복사하세요.</span></label><textarea id="vcr-paste-text" rows="7" placeholder="Excel에서 VCR Load Schedule 표를 복사한 뒤 여기에 붙여넣으세요."></textarea><div class="form-actions"><button id="vcr-paste-import" class="primary">붙여넣은 VCR 화물 반영</button></div></div>${draft.sof?'<button id="import-sof-cargo" class="subtle" style="margin-bottom:16px">SOF 분석 화물 가져오기</button>':''}${renderRows('cargo')}`;
     else if(definitions[tab]) content=renderRows(tab);
-    else if(tab==='reports') content=`<div class="detail-section-heading"><div><h3>최신 리포트</h3><p>수신한 리포트를 붙여넣고, SOF 탭에서 분석을 이어가세요.</p></div><label class="subtle file-label">TXT 불러오기<input id="latest-report-file" type="file" accept=".txt,text/plain" hidden></label></div><div class="detail-grid three">${field('reportType','REPORT 종류')}${field('reportReceived','수신 일시 (LT)','datetime-local')}<label class="report-check"><input type="checkbox" data-field="reportChecked" ${draft.reportChecked?'checked':''}>REPORT 확인 완료</label></div><textarea data-field="latestReport" rows="14" placeholder="운항 리포트 원문을 붙여넣어 주세요. 이메일 수신자·서명 등 불필요한 개인정보는 제거해 주세요.">${esc(draft.latestReport)}</textarea><button class="primary report-to-sof" data-tab="sof">이 리포트로 SOF 작업하기 ↗</button>`;
-    else content=`<div class="detail-section-heading"><div><h3>SOF automation</h3><p>협운해운 원본 로고·폰트·서식과 기존 NOR / BL / SHIP 분석을 그대로 사용합니다.</p></div>${draft.sof?'<span class="status-tag inport">분석 기록 연결됨</span>':''}</div><p id="sof-link-status" class="sof-link-status">리포트 분석 후 이 선박·항차·항만과 일치하는 결과만 연결합니다.</p><iframe id="sof-frame" title="선박별 SOF 자동화" src="/sof.html?embedded=1"></iframe>`;
+    else content=`<div class="detail-section-heading"><div><h3>SOF 생성</h3><p>리포트 입력·분석·SOF 생성·파일 출력은 이 한 곳에서 처리합니다. 협운해운 원본 서식은 그대로 유지됩니다.</p></div>${draft.sof?'<span class="status-tag inport">분석 기록 연결됨</span>':''}</div><div class="sof-context"><strong>${esc(vesselNameForSof(draft.vessel)) || '선박명 입력 필요'} / ${esc(draft.voyage) || '항차 입력 필요'} / ${esc(draft.port) || '항만 입력 필요'}</strong><span>선박 페이지의 선박명·항차·항만이 SOF에 자동 적용됩니다.</span></div><p id="sof-link-status" class="sof-link-status">리포트 분석 후 이 입항 건과 일치하는 결과만 연결합니다.</p><iframe id="sof-frame" title="선박별 SOF 생성" src="/sof.html?embedded=1"></iframe>`;
     $('#detail-panel').innerHTML=content;
     dialog.querySelectorAll('[data-tab]').forEach(button=>button.classList.toggle('active',button.dataset.tab===tab));
   }
@@ -96,22 +95,18 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     if(list)draft[list][Number(index)][key]=event.target.type==='checkbox'?event.target.checked:event.target.value;
     if(field||list)markDirty();
   });
-  dialog.addEventListener('change',async event=>{
-    if(!['latest-report-file','vcr-file'].includes(event.target.id)||!draft||busy)return;
-    const file=event.target.files[0];if(!file)return;
-    if(event.target.id==='latest-report-file'&&file.size>50000){updateSaveStatus('원문은 50KB 이하로 입력해 주세요.');return;}
-    if(event.target.id==='vcr-file'&&file.size>20*1024*1024){updateSaveStatus('VCR 파일은 20MB 이하로 올려 주세요.');return;}
-    const ticket=generation,callId=draft.id;busy=true;updateSaveStatus(event.target.id==='vcr-file'?'VCR를 읽는 중…':'원문을 불러오는 중…');
-    try{
-      if(event.target.id==='latest-report-file'){const raw=await file.text();if(ticket!==generation||draft?.id!==callId)return;draft.latestReport=raw;markDirty();renderPanel();}
-      else {const {read,utils}=await import('xlsx');const cargo=parseVcrWorkbook(read(await file.arrayBuffer(),{type:'array',cellDates:false}),sheet=>utils.sheet_to_json(sheet,{header:1,defval:'',raw:false}),{port:draft.port});if(ticket!==generation||draft?.id!==callId)return;if(draft.cargo.length&&!await confirmDiscard(`현재 화물 ${draft.cargo.length}건을 VCR 화물 ${cargo.length}건으로 바꿀까요?`))return;draft.cargo=cargo;draft.vcrFileName=file.name;markDirty();renderPanel();updateSaveStatus(`VCR 화물 ${cargo.length}건을 반영했습니다.`);}
-    }catch(error){if(ticket===generation)updateSaveStatus(`파일을 읽지 못했습니다: ${error.message||'형식을 확인해 주세요.'}`);}finally{event.target.value='';if(ticket===generation){busy=false;const message=$('#save-status').textContent;updateSaveStatus(message);}}
-  });
   dialog.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button||!draft||busy)return;
-    if(button.dataset.tab){if(button.classList.contains('report-to-sof')){if(!draft.latestReport.trim()){updateSaveStatus('먼저 새 리포트 원문을 입력해 주세요.');return;}startNewSof=true;}tab=button.dataset.tab;renderPanel();}
+    if(button.dataset.tab){tab=button.dataset.tab;renderPanel();}
     if(button.dataset.addRow){const key=button.dataset.addRow;draft[key].push(Object.fromEntries(definitions[key].map(([name,,type])=>[name,type==='checkbox'?false:type==='crew-kind'?'ON-SIGNER':''])));markDirty();renderPanel();}
     if(button.id==='import-sof-cargo'&&draft.sof){if(!validation.sofMatchesCall(draft.sof,draft)){updateSaveStatus('SOF와 입항 정보가 다릅니다. 화물을 가져오지 않았습니다.');return;}if(draft.cargo.length&&!await confirmDiscard('현재 화물 표를 SOF 분석 화물로 바꿀까요?'))return;draft.cargo=draft.sof.groups.flatMap(group=>group.cargo.map(cargo=>({operation:group.operation,number:cargo.number,name:cargo.name,bl:cargo.bl==null?'':String(cargo.bl),ship:cargo.ship==null?'':String(cargo.ship),tanks:cargo.tank,party:cargo.party||'',note:group.berth})));markDirty();renderPanel();}
+    if(button.id==='vcr-paste-import'){
+      try{
+        const cargo=parseVcrClipboard($('#vcr-paste-text').value,{port:draft.port});
+        if(draft.cargo.length&&!await confirmDiscard(`현재 화물 ${draft.cargo.length}건을 VCR 화물 ${cargo.length}건으로 바꿀까요?`))return;
+        draft.cargo=cargo;draft.vcrFileName='';markDirty();renderPanel();updateSaveStatus(`VCR 화물 ${cargo.length}건을 반영했습니다.`);
+      }catch(error){updateSaveStatus(`VCR 표를 읽지 못했습니다: ${error.message||'열 구성을 확인해 주세요.'}`);}
+    }
     if(button.dataset.removeRow){draft[button.dataset.removeRow].splice(Number(button.dataset.index),1);markDirty();renderPanel();}
     if(button.id==='close-vessel')close();
     if(button.id==='backup-draft') {const url=URL.createObjectURL(new Blob([JSON.stringify(draft,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`HYOPU_DRAFT_${draft.vessel.replace(/[^a-z0-9_-]/gi,'_')||'new'}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);updateSaveStatus('초안 파일을 다운로드했습니다. 공유 저장은 별도로 필요합니다.');}

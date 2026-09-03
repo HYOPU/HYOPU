@@ -37,6 +37,19 @@ export function parseVcrRows(rows, { port = '' } = {}) {
   }));
 }
 
+// Excel copies a selected range as tab-separated rows. Keeping the parser on
+// the same row format as a workbook means the user can paste the Load Schedule
+// table directly without uploading or retaining the original VCR file.
+export function parseVcrClipboard(value, options = {}) {
+  const source = text(value).replace(/^\uFEFF/, '');
+  if (!source) throw new Error('VCR 표를 Excel에서 복사해 붙여넣어 주세요.');
+  const rows = source
+    .split(/\r?\n/)
+    .filter(line => line.trim())
+    .map(line => line.split('\t'));
+  return parseVcrRows(rows, options);
+}
+
 export function parseVcrWorkbook(workbook, rowsForSheet, options = {}) {
   const sheetName = workbook.SheetNames.find(name => key(name).includes('LOADSCHEDULE'));
   if (!sheetName) throw new Error('VCR의 Load-Schedule 시트를 찾지 못했습니다.');

@@ -82,36 +82,23 @@ test('a delayed reload of A cannot turn the visible B editor into an A draft', a
   } finally { app.restore(); }
 });
 
-test('a delayed TXT read for A cannot inject A report text into B', async () => {
-  const read = deferred();
-  const app = harness(deferred());
-  try {
-    await app.workspace.open('A');
-    const pending = app.callbacks.change({ target: {
-      id: 'latest-report-file',
-      files: [{ size: 100, text: () => read.promise }],
-    } });
-    await app.workspace.open('B');
-    const switchedImmediately = app.dialog.innerHTML.includes('BETA');
-    read.resolve('ALPHA / V1 / ULSAN / DEP.REPORT\nReport intended for A only.');
-    await pending;
-    if (!switchedImmediately) await app.workspace.open('B');
-    app.editNotes('Intended for B');
-    await app.click('save-call');
-    assert.equal(app.saved.id, 'B');
-    assert.equal(app.saved.latestReport, '');
-    assert.equal(app.saved.notes, 'Intended for B');
-  } finally { app.restore(); }
-});
-test('new-report action opens new raw text instead of resuming an old SOF snapshot',async()=>{
+test('new raw report from the single SOF workspace replaces an old SOF snapshot',async()=>{
   const app=harness(deferred());
   try{
     app.calls.A.sof={fields:{vessel:'ALPHA',voyage:'V1',port:'ULSAN',charterer:''},groups:[],warnings:[]};
     app.calls.A.latestReport='old report';app.workspace.open('A');
     await app.click('sof',{tab:'sof'});app.ready();assert.equal(app.messages.at(-1).report.fields.vessel,'ALPHA');
-    app.callbacks.input({target:{dataset:{field:'latestReport'},type:'text',value:'new report'}});
-    await app.click('new-sof',{tab:'sof'},['report-to-sof']);app.ready();
+    app.raw('new report');app.ready();
     assert.equal(app.messages.at(-1).report,null);assert.equal(app.messages.at(-1).raw,'new report');
+  }finally{app.restore();}
+});
+test('SOF context expands an S. vessel name and retains the current voyage',async()=>{
+  const app=harness(deferred());
+  try{
+    app.calls.A.vessel='S.PERSEVERANCE';app.calls.A.voyage='HBR 131';
+    await app.workspace.open('A');await app.click('sof',{tab:'sof'});app.ready();
+    assert.equal(app.messages.at(-1).fields.vessel,'STOLT PERSEVERANCE');
+    assert.equal(app.messages.at(-1).fields.voyage,'HBR 131');
   }finally{app.restore();}
 });
 test('raw text typed inside SOF survives a tab change without prematurely overwriting old analysis',async()=>{

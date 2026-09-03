@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseVcrRows, vesselNameForSof } from '../vcr-parser.mjs';
+import { parseVcrClipboard, parseVcrRows, vesselNameForSof } from '../vcr-parser.mjs';
 
 const rows = [
   ['Voyage Cargo Report - Loading'], [],
@@ -19,4 +19,10 @@ test('VCR loading schedule updates only the current port cargo rows', () => {
 test('short vessel names are expanded for an embedded SOF context', () => {
   assert.equal(vesselNameForSof('S.PERSEVERANCE'), 'STOLT PERSEVERANCE');
   assert.equal(vesselNameForSof('STOLT PERSEVERANCE'), 'STOLT PERSEVERANCE');
+});
+
+test('a copied Excel VCR table uses the same port-specific parser', () => {
+  const clipboard = rows.map(row => row.join('\t')).join('\n');
+  const cargo = parseVcrClipboard(clipboard, { port: 'ULSAN' });
+  assert.deepEqual(cargo.map(item => [item.number, item.name, item.bl]), [['110', 'MMA', '2000'], ['145', 'VAM', '2500.2']]);
 });
