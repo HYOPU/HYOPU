@@ -3,3 +3,10 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Source fields remain clean; only unresolved checks appear above in red. */
+.warnings {
+  color: #991b1b;
+  background: #fff1f2;
+  border: 1px solid #dc2626;
+}

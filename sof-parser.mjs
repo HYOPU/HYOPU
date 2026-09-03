@@ -42,6 +42,15 @@ const number = value => {
   const amount=clean(value).replace(/,/g,'').replace(/\s*M\s*\/?\s*T$/i,'').trim();
   return amount ? Number(amount) : null;
 };
+// Cargo table headers often combine the product, nominated quantity and tank
+// in one cell. The SOF cargo field must contain the product name only.
+const cargoNameOnly = value => clean(value)
+  .replace(/\bJSTT\s*SP\s*#?\s*5\b/gi, ' ')
+  .replace(/\bKEOYOUNG\s+MASTER\b/gi, ' ')
+  .replace(/\bWOORI\s+HANA\b/gi, ' ')
+  .replace(/^[-:;|]+|[-:;|]+$/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
 
 function validNorTime(value) {
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value || '')) {
@@ -52,8 +61,8 @@ function validNorTime(value) {
   return Boolean(short && +short[1] >= 1 && +short[1] <= 31 && +short[2] <= 23 && +short[3] <= 59);
 }
 
-// NOR is shared by a physical berth visit, not chained between its separate
-// cargo/coaster sheets. Keep cargo-free layby calls in this timeline too.
+// NOR is shared by a physical berth visit. A layby / non-cargo berth is not a
+// cargo operation, so find the nearest earlier berth that actually has cargo.
 export function applyNorTenderedRule(report) {
   if (!Array.isArray(report.calls)) return report;
   const groups = report.groups || [];
@@ -62,18 +71,25 @@ export function applyNorTenderedRule(report) {
   report.warnings = (report.warnings || []).filter(warning => !oldWarnings.has(warning));
   report.norWarnings = [];
   for (const group of groups) {
-    const oldRemarks = new Set(group.norRemarks || []);
-    group.remarks = (group.remarks || []).filter(remark => !oldRemarks.has(remark));
     group.norRemarks = [];
     group.norTenderedAuto = false;
     const callIndex = report.calls.findIndex(call => call.id === group.callId);
     if (callIndex < 0) continue;
     if (group.callId === firstCargoCallId) {
+      if (!group.norTendered && group.coaster?.norTendered) {
+        group.norTendered = group.coaster.norTendered;
+        group.reportedNorTendered = group.coaster.norTendered;
+      }
       group.norTenderedExplanation = '입항 원문에 명시된 최초 NOR TENDERED';
     } else {
-      const previous = report.calls[callIndex - 1];
-      // Use the editable groups, never the stale report.cargo snapshot.
-      const cargo = previous ? groups.filter(item => item.callId === previous.id).flatMap(item => item.cargo || []) : [];
+      let sourceCall = report.calls[callIndex - 1];
+      // Use editable groups, never the stale report.cargo snapshot. If the
+      // immediately previous berth has no cargo (for example NLB#1), skip it.
+      let cargo = sourceCall ? groups.filter(item => item.callId === sourceCall.id).flatMap(item => item.cargo || []) : [];
+      for (let previousIndex = callIndex - 2; !cargo.length && previousIndex >= 0; previousIndex--) {
+        sourceCall = report.calls[previousIndex];
+        cargo = groups.filter(item => item.callId === sourceCall.id).flatMap(item => item.cargo || []);
+      }
       const times = cargo.map(item => item.hoseOff);
       const allKnown = times.length > 0 && times.every(validNorTime);
       const fullDates = allKnown && times.every(time => time.includes('T'));
@@ -87,19 +103,18 @@ export function applyNorTenderedRule(report) {
         const comparable = latest.includes('T') || latest.slice(0, 2) === currentBerthAt.slice(0, 2);
         if (!sameFormat || (comparable && latest > currentBerthAt)) latest = '';
       }
-      group.norTendered = latest;
-      group.norTenderedAuto = true;
-      group.norTenderedExplanation = `직전 부두 ${previous?.berth || '(미확인)'}의 마지막 HOSE OFF${latest ? ` · ${displayTime(latest)}` : ' · 확인 필요'}`;
-      if (group.reportedNorTendered && group.reportedNorTendered !== latest) {
-        group.norRemarks.push(`REPORTED NOR TENDERED: ${displayTime(group.reportedNorTendered)} (NOR field uses previous berth HOSE OFF: ${displayTime(latest) || 'REVIEW'}).`);
-      }
+      const reportedNorTendered = group.coaster?.norTendered || group.reportedNorTendered || '';
+      group.reportedNorTendered = reportedNorTendered;
+      group.norTendered = latest || reportedNorTendered;
+      group.norTenderedAuto = Boolean(latest);
+      group.norTenderedExplanation = latest
+        ? `직전 화물 부두 ${sourceCall?.berth || '(미확인)'}의 마지막 HOSE OFF · ${displayTime(latest)}`
+        : '직전 화물 부두의 HOSE OFF 확인 필요';
     }
     if (!group.norTendered) {
       const reason = group.norTenderedAuto ? 'previous berth last HOSE OFF is missing, incomplete or invalid' : 'arrival NOR TENDERED not stated in source report';
-      group.norRemarks.push(`REVIEW REQUIRED: NOR TENDERED - ${reason}.`);
       report.norWarnings.push(`${group.sheetName}: NOR TENDERED 확인 필요 (${group.norTenderedAuto ? group.norTenderedExplanation : '입항 원문 미기재'})`);
     }
-    group.remarks.push(...group.norRemarks);
   }
   report.warnings.push(...report.norWarnings);
   return report;
@@ -125,7 +140,11 @@ export function parseReport(input) {
     if(departed)continue;
     if(/^\*?LINE UP AT /i.test(line)){lineUp=true;events.push({text:line,sourceLine,callId:currentCall?.id,coaster:null,lineUp:true});continue;}
     const co=line.match(/^(?:SBTS|SBTD|PORT|STBD)\s+SIDE.*?COASTER\s+['"]([^'"]+)['"](.*)$/i);
-    if(co){coaster={name:co[1],details:clean(co[2]),sourceLine};currentCargo=null;lineUp=false;continue;}
+    if(co){
+      const coasterNor=co[2].match(/\bNOR(?:T|\s+TENDER(?:ED)?)\s+(\d{1,2}\/\d{4})\b/i);
+      coaster={name:co[1],details:clean(co[2]),norTendered:coasterNor?getStamp(coasterNor[1],sourceLine):'',sourceLine};
+      currentCargo=null;lineUp=false;continue;
+    }
     const op=line.match(/^\((LOAD|DISCH)\)/i);
     if(op)operation=op[1].toUpperCase();
     const cargoMatch=line.replace(/^\((?:LOAD|DISCH)\)\s*/i,'').match(/^(?:CGO)?#(\d+[A-Z]?)\s+(.+)$/i);
@@ -134,7 +153,9 @@ export function parseReport(input) {
       const timeMatches=[...rest.matchAll(/\b\d{1,2}\/\d{4}\b/g)];
       let name='',tank='',plannedQuantity=null,times=[],bl=null,ship=null,details='';
       if(timeMatches.length>=4){
-        name=clean(rest.slice(0,timeMatches[0].index).replace(/\/\s*$/,''));
+        const definition=clean(rest.slice(0,timeMatches[0].index));
+        const cargoDefinition=definition.match(/^(.*?)\s*\/\s*[\d,.]+\s*M\s*\/?\s*T\s*\([^)]*\)/i);
+        name=cargoNameOnly(cargoDefinition?.[1]||definition.replace(/\/\s*$/,''));
         times=timeMatches.slice(0,4).map(x=>getStamp(x[0],sourceLine));
         let tail=rest.slice(timeMatches[3].index+timeMatches[3][0].length).trim();
         const figures=[];
@@ -145,12 +166,12 @@ export function parseReport(input) {
       }else{
         const detail=rest.match(/^(.*?)\s*\/\s*([\d,.]+)\s*M\s*\/?\s*T\s*\(([^)]*)\)(.*)$/i);
         if(!detail){warnings.push(`행 ${sourceLine}: 화물 #${cargoMatch[1]} 형식을 확인해 주세요.`);continue;}
-        [,name,,tank,details]=detail;plannedQuantity=number(detail[2]);
+        [,name,,tank,details]=detail;name=cargoNameOnly(name);plannedQuantity=number(detail[2]);
         // Discharge report headers state B/L quantity. SHIP FIG is a separate
         // measurement and must remain empty unless the report supplies it.
         if(operation==='DISCH')bl=plannedQuantity;
       }
-      currentCargo={id:`cargo-${nextId++}`,number:cargoMatch[1],name:clean(name),operation:operation||'LOAD',tank,party:'',line:'',plannedQuantity,
+      currentCargo={id:`cargo-${nextId++}`,number:cargoMatch[1],name:cargoNameOnly(name),operation:operation||'LOAD',tank,party:'',line:'',plannedQuantity,
         hoseOn:times[0]||'',commenced:times[1]||'',completed:times[2]||'',hoseOff:times[3]||'',bl:bl??null,ship:ship??null,
         details:clean(details),callId:currentCall?.id||null,coaster:coaster?{...coaster}:null,sourceLine};
       cargos.push(currentCargo);if(!currentCall)warnings.push(`행 ${sourceLine}: 화물 #${currentCargo.number}의 접안 장소가 없습니다.`);continue;
@@ -221,7 +242,7 @@ export function parseReport(input) {
       const norGroups=explicit.length?explicit:initial;
       for(const g of norGroups){
         if(g.callId===groups[0]?.callId&&g.reportedNorTendered){
-          if(g.reportedNorTendered!==event.at)g.remarks.push(`REPORTED NOR TENDERED: ${displayTime(event.at)} (later notice; initial arrival NOR retained).`);
+          if(g.reportedNorTendered!==event.at)warnings.push(`${g.sheetName}: 최초 NOR TENDERED와 이후 통지 시간이 달라 확인 필요`);
           continue;
         }
         g.norTendered=event.at;g.reportedNorTendered=event.at;
@@ -241,10 +262,9 @@ export function parseReport(input) {
     else if(g.cargo.every(c=>/\bATIP\b/i.test(c.details))){g.tanksInspected='ATIP';g.tanksAccepted='ATIP';}
     const missing=[];
     if(!g.norAccepted)missing.push('NOR ACCEPTED');
-    if(missing.length){g.remarks.push(`REVIEW REQUIRED: ${missing.join(' / ')} not stated in source report.`);warnings.push(`${g.sheetName}: ${missing.join(' / ')} 확인 필요 (원문 미기재)`);}
-    if(g.coaster)g.remarks.unshift(`CGO#${g.cargo.map(c=>c.number).join('/')} ${g.operation==='LOAD'?'LOADED FROM':'DISCHARGED TO'} COASTER '${g.coaster.name}'${g.coaster.details}`);
+    if(missing.length)warnings.push(`${g.sheetName}: ${missing.join(' / ')} 확인 필요 (원문 미기재)`);
     for(const c of g.cargo){
-      if(c.bl===null) {g.remarks.push(`CGO#${c.number}: B/L FIG not stated${c.plannedQuantity!==null?`; nominated quantity ${c.plannedQuantity.toLocaleString('en-US')} MT`:''}.`);warnings.push(`${g.sheetName} CGO#${c.number}: B/L FIG 확인 필요`);}
+      if(c.bl===null) warnings.push(`${g.sheetName} CGO#${c.number}: B/L FIG 확인 필요`);
       for(const field of ['hoseOn','commenced','completed','hoseOff'])if(!c[field])warnings.push(`${g.sheetName} CGO#${c.number}: ${field} 확인 필요`);
     }
     g.remarks=[...new Set(g.remarks)];

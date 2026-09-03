@@ -98,3 +98,38 @@ test('BETULA typed figures and June-to-July rollover remain unchanged', () => {
   assert.equal(result.cargo.find(value => value.number === '310').hoseOn, '2026-07-02T06:00');
   assert.equal(result.groups[2].leftBerth, '2026-07-01T02:44');
 });
+
+test('cargo-free layby is skipped for NOR and cargo table names contain only products', () => {
+  const result = parseReport([
+    'STOLT PERSEVERANCE / HBR 117 / ULSAN / DEP.REPORT',
+    "AUG' 2026",
+    '28/0700 : BERTHED AT P#42',
+    '(LOAD)',
+    'CGO#155 TOLUENE / 28/0710 28/0720 28/0840 28/0850 1,000 MT 999 MT 1P',
+    '29/0800 : LEFT FM P#42',
+    '29/0830 : BERTHED AT NLB#1 (LAYBY BERTH)',
+    '30/0800 : LEFT FM NLB#1',
+    '31/0905 : BERTHED AT JSTT SP#5',
+    "SBTS SIDE ALONGSIDE COASTER 'ZI DING XIANG' (NORT 24/1600)",
+    '(DISCH)',
+    'CGO#160 ISOPRENE / 31/0910 31/0920 31/0930 31/0940 1,000 MT 999 MT 2P',
+    '01/0800 : BERTHED AT JSTT SP#5',
+    "SBTS SIDE ALONGSIDE COASTER 'JSTT SP5'",
+    '(DISCH)',
+    'CGO#145 VAM / 2,500MT(DT2S)(WWT) 01/0810 01/0820 01/0830 01/0840 2,500 MT 2,499 MT DT2S',
+    '02/0800 : BERTHED AT P#63',
+    "SBTS SIDE ALONGSIDE COASTER 'KEOYOUNG MASTER'",
+    '(DISCH)',
+    'CGO#110 MMA / 1,500MT(1P)(WWT) 02/0810 02/0820 02/0830 02/0840 1,500 MT 1,499 MT 1P',
+    '03/0800 : BERTHED AT P#22',
+    "SBTS SIDE ALONGSIDE COASTER 'WOORI HANA'",
+    '(DISCH)',
+    'CGO#165C ISOPRENE / 800MT(2S)(WWT) 03/0810 03/0820 03/0830 03/0840 800 MT 799 MT 2S',
+  ].join('\n'));
+  const bySheet = Object.fromEntries(result.groups.map(group => [group.sheetName, group]));
+  assert.equal(bySheet['ZI DING XIANG'].norTendered, '2026-08-28T08:50');
+  assert.equal(bySheet['JSTT SP5'].cargo[0].name, 'VAM');
+  assert.equal(bySheet['KEOYOUNG MASTER'].cargo[0].name, 'MMA');
+  assert.equal(bySheet['WOORI HANA'].cargo[0].name, 'ISOPRENE');
+  assert.ok(!result.groups.flatMap(group => group.remarks).some(remark => /REVIEW REQUIRED|B\/L FIG not stated|REPORTED NOR TENDERED/i.test(remark)));
+});
