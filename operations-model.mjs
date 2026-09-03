@@ -22,8 +22,15 @@ export function calendarDays(month) {
   return Array.from({ length: count }, (_, i) => { const day = new Date(start); day.setUTCDate(start.getUTCDate() + i); return day.toISOString().slice(0, 10); });
 }
 export function shiftMonth(month, offset) { const day = new Date(`${month}-01T00:00:00Z`); day.setUTCMonth(day.getUTCMonth() + offset); return day.toISOString().slice(0, 7); }
-export function matchesFilters(call, { pic = '', port = '', query = '' } = {}) {
-  return call.etaActive !== false && call.status !== 'DEPARTED' && (!pic || call.pic === pic) && (!port || call.port === port) && (!query || `${call.vessel} ${call.voyage}`.toLowerCase().includes(query.toLowerCase()));
+const matchesSearch = (call, { pic = '', port = '', query = '' } = {}) =>
+  (!pic || call.pic === pic) && (!port || call.port === port) && (!query || `${call.vessel} ${call.voyage}`.toLowerCase().includes(query.toLowerCase()));
+export function matchesFilters(call, filters = {}) {
+  return call.etaActive !== false && call.status !== 'DEPARTED' && matchesSearch(call, filters);
+}
+export function matchesDepartedFilters(call, filters = {}) {
+  // Departed calls remain available as an operational history even after a
+  // later ETA source snapshot removes them from the active ETA list.
+  return call.status === 'DEPARTED' && matchesSearch(call, filters);
 }
 const koreaToday = () => new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export function etaOrder(left, right) {

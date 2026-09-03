@@ -1,5 +1,5 @@
 import seedRows from './eta-seed.json';
-import { PICS, PORTS, hydrateSeed, parseEta, calendarDays, shiftMonth, matchesFilters, callsOnDay, etaOrder, inMonth } from './operations-model.mjs';
+import { PICS, PORTS, hydrateSeed, parseEta, calendarDays, shiftMonth, matchesFilters, matchesDepartedFilters, callsOnDay, etaOrder, inMonth } from './operations-model.mjs';
 import { createVesselWorkspace } from './vessel-workspace.mjs';
 const $ = selector => document.querySelector(selector);
 export const esc = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
@@ -15,21 +15,23 @@ function card(call, day) {
   return `<button class="vessel-card ${call.status === 'INPORT' ? 'inport' : ''} ${eta.uncertain ? 'uncertain' : ''}" data-call="${esc(call.id)}" aria-label="${esc(call.vessel)} ${esc(call.voyage)} ${esc(call.port)} 상세"><span class="card-heading"><span class="card-vessel ${call.highlight?.includes('vessel') ? 'highlight' : ''}">${esc(call.vessel)}</span><span class="card-time">${continuing ? 'IN PORT' : esc(eta.time || eta.period || 'TBC')}${eta.uncertain ? ' ?' : ''}</span></span><span class="card-voyage">${esc(call.voyage)}</span><span class="card-footer">${portTag(call)}<span class="pic-dot">${esc(call.pic)}</span></span>${continuing ? `<span class="date-note">ETD ${esc(call.etdRaw)}</span>` : ''}</button>`;
 }
 function render() {
-  const filtered = calls.filter(call => matchesFilters(call, filters));
-  const visible = (view === 'list' && listAll ? filtered : filtered.filter(call => inMonth(call, month))).sort(etaOrder);
-  const title = view === 'list' ? 'Korea ETA 리스트' : view === 'tasks' ? '업무 체크리스트' : '선박 운항 캘린더';
+  const departed = view === 'departed';
+  const filtered = calls.filter(call => departed ? matchesDepartedFilters(call, filters) : matchesFilters(call, filters));
+  const visible = ((view === 'list' && listAll) || departed ? filtered : filtered.filter(call => inMonth(call, month))).sort(etaOrder);
+  const title = view === 'list' ? 'Korea ETA 리스트' : departed ? '출항 완료 선박' : view === 'tasks' ? '업무 체크리스트' : '선박 운항 캘린더';
   $('#page-title').innerHTML = `${title}<span class="title-dot">.</span>`;
-  $('#page-description').textContent = view === 'list' ? 'ETA UPDATE 원본을 기준으로 최신 선박 일정을 관리합니다.' : view === 'calendar' ? 'ETA LIST를 미러링한 월간 일정입니다. 카드를 선택해 선박 업무를 확인하세요.' : '담당 선박의 업무를 한곳에서 확인합니다.';
+  $('#page-description').textContent = view === 'list' ? 'ETA UPDATE 원본을 기준으로 최신 선박 일정을 관리합니다.' : departed ? '출항 완료 선박을 별도로 보관합니다. 선박명을 선택해 업무 기록을 확인하세요.' : view === 'calendar' ? 'ETA LIST를 미러링한 월간 일정입니다. 카드를 선택해 선박 업무를 확인하세요.' : '담당 선박의 업무를 한곳에서 확인합니다.';
   $('#breadcrumb').textContent = title;
-  $('#month-title').textContent = view === 'list' && listAll ? '전체 ETA 일정' : `${month.slice(0, 4)}년 ${Number(month.slice(5))}월`;
+  $('#month-title').textContent = view === 'list' && listAll ? '전체 ETA 일정' : departed ? '출항 완료 이력' : `${month.slice(0, 4)}년 ${Number(month.slice(5))}월`;
   $('#all-dates').hidden = view !== 'list';
   $('#all-dates').classList.toggle('selected',listAll);
   document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === view));
   const taskCount = visible.flatMap(call => call.tasks).filter(task => !task.done).length;
-  $('#metrics').innerHTML = [['PORT CALLS',visible.length,'건','선택한 월 기준'],['IN PORT',visible.filter(call=>call.status==='INPORT').length,'척','원문 입항 상태'],['PRE-ARRIVAL',visible.filter(call=>call.status==='PRE-ARRIVAL').length,'건','입항 예정'],['OPEN TASKS',taskCount,'건','미완료 업무']].map(([label,count,unit,note])=>`<article class="metric"><span class="metric-label">${label}</span><strong class="metric-value">${count}<span class="metric-unit">${unit}</span></strong><span class="metric-note">${note}</span></article>`).join('');
-  $('#result-label').textContent = `${filters.pic || '전체 담당자'} · ${visible.length} port calls`;
+  const metrics = departed ? [['DEPARTED',visible.length,'건','출항 완료'],['ULSAN',visible.filter(call=>call.port==='ULSAN').length,'건','울산 출항'],['OTHER PORTS',visible.filter(call=>call.port!=='ULSAN').length,'건','기타 항만'],['OPEN TASKS',taskCount,'건','미완료 업무']] : [['PORT CALLS',visible.length,'건','선택한 월 기준'],['IN PORT',visible.filter(call=>call.status==='INPORT').length,'척','원문 입항 상태'],['PRE-ARRIVAL',visible.filter(call=>call.status==='PRE-ARRIVAL').length,'건','입항 예정'],['OPEN TASKS',taskCount,'건','미완료 업무']];
+  $('#metrics').innerHTML = metrics.map(([label,count,unit,note])=>`<article class="metric"><span class="metric-label">${label}</span><strong class="metric-value">${count}<span class="metric-unit">${unit}</span></strong><span class="metric-note">${note}</span></article>`).join('');
+  $('#result-label').textContent = `${filters.pic || '전체 담당자'} · ${visible.length} ${departed ? 'departed calls' : 'port calls'}`;
   if (view === 'calendar') $('#board-content').innerHTML = `<div class="calendar">${['MON','TUE','WED','THU','FRI','SAT','SUN'].map(day=>`<div class="weekday">${day}</div>`).join('')}${calendarDays(month).map(day=>`<div class="calendar-day ${!day.startsWith(month)?'outside':''} ${day===today?'today-cell':''}" data-date="${day}"><div class="day-number ${day===today?'today':''}"><span>${Number(day.slice(8))}</span></div>${callsOnDay(filtered,day).map(call=>card(call,day)).join('')}</div>`).join('')}</div>`;
-  else if (view === 'list') $('#board-content').innerHTML = `<div class="table-scroll"><table class="eta-table"><thead><tr><th>VESSEL</th><th>VOYAGE</th><th>PORT</th><th>ETA / ARRIVED · LT</th><th>STATUS</th><th>ETD · LT</th><th>PIC</th><th></th></tr></thead><tbody>${visible.map(call=>`<tr><td><button class="vessel-link ${call.highlight?.includes('vessel')?'highlight':''}" data-call="${esc(call.id)}">${esc(call.vessel)}</button></td><td>${esc(call.voyage)}</td><td>${portTag(call)}</td><td>${esc(call.etaRaw)}</td><td>${statusTag(call)}</td><td>${esc(call.etdRaw)||'—'}</td><td>${esc(call.pic)||'미배정'}</td><td><button class="icon-button" data-call="${esc(call.id)}" aria-label="${esc(call.vessel)} 업무 열기">↗</button></td></tr>`).join('')}</tbody></table>${!visible.length?'<div class="empty"><strong>조회된 선박이 없습니다</strong>검색어·항만·담당자 또는 월을 변경해 주세요.</div>':''}</div>`;
+  else if (view === 'list' || departed) $('#board-content').innerHTML = `<div class="table-scroll"><table class="eta-table"><thead><tr><th>VESSEL</th><th>VOYAGE</th><th>PORT</th><th>ETA / ARRIVED · LT</th><th>STATUS</th><th>ETD · LT</th><th>PIC</th><th></th></tr></thead><tbody>${visible.map(call=>`<tr><td><button class="vessel-link ${call.highlight?.includes('vessel')?'highlight':''}" data-call="${esc(call.id)}">${esc(call.vessel)}</button></td><td>${esc(call.voyage)}</td><td>${portTag(call)}</td><td>${esc(call.etaRaw)}</td><td>${statusTag(call)}</td><td>${esc(call.etdRaw)||'—'}</td><td>${esc(call.pic)||'미배정'}</td><td><button class="icon-button" data-call="${esc(call.id)}" aria-label="${esc(call.vessel)} 업무 열기">↗</button></td></tr>`).join('')}</tbody></table>${!visible.length?'<div class="empty"><strong>조회된 선박이 없습니다</strong>검색어·항만·담당자 필터를 변경해 주세요.</div>':''}</div>`;
   else {
     const tasks=visible.flatMap(call=>call.tasks.map(task=>({call,task})));
     $('#board-content').innerHTML = tasks.length ? `<div class="task-list">${tasks.map(({call,task})=>`<div class="task-entry ${task.done?'done':''}"><span>${task.done?'☑':'☐'}</span><button data-call="${esc(call.id)}"><strong>${esc(task.text)||'제목 없음'}</strong><small>${esc(call.vessel)} · ${esc(call.port)} · ${esc(call.pic)} ${task.due?' / '+esc(task.due):''}</small></button></div>`).join('')}</div>` : '<div class="empty"><strong>등록된 할 일이 없습니다</strong>선박 상세의 TO DO 탭에서 업무를 추가하고 공유 저장해 주세요.</div>';

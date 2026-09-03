@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {hydrateSeed,parseEta,calendarDays,shiftMonth,callsOnDay,etaOrder,inMonth,matchesFilters} from '../operations-model.mjs';
+import {hydrateSeed,parseEta,calendarDays,shiftMonth,callsOnDay,etaOrder,inMonth,matchesFilters,matchesDepartedFilters} from '../operations-model.mjs';
 import {parseReport} from '../sof-parser.mjs';
 import validation from '../lib/call-validation.js';
 import etaSync from '../lib/eta-sync.js';
@@ -47,6 +47,8 @@ test('hidden ETA snapshots do not appear in the calendar or ETA list filters',()
   assert.equal(matchesFilters({...calls[0],etaActive:false},{}),false);
   assert.equal(matchesFilters({...calls[0],status:'DEPARTED'},{}),false);
   assert.equal(matchesFilters({...calls[0],etaActive:true},{}),true);
+  assert.equal(matchesDepartedFilters({...calls[0],status:'DEPARTED',etaActive:false},{}),true);
+  assert.equal(matchesDepartedFilters({...calls[0],status:'DEPARTED',pic:'JACK'},{pic:'RICK'}),false);
 });
 test('Excel ETA snapshot updates voyage changes in place and hides removed source calls', async()=>{
   const first={id:'eta-2026-001',data:{...calls[0],vessel:'STOLT TEST',voyage:'OLD 1',port:'ULSAN',etaRaw:'09/04 0800',notes:'Keep working notes',etaActive:true},revision:4};
