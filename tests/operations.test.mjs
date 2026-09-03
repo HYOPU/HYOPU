@@ -63,13 +63,14 @@ async function withBackend(work,overrides={}){
     if(url.endsWith('/auth/v1/user'))return response({id:'user-test',email:'member@example.invalid'},overrides.invalidToken?401:200);
     if(url.includes('/auth/v1/token'))return response({access_token:'secret-session-token',expires_in:3600});
     if(url.includes('/hyopu_members'))return response(overrides.nonMember?[]:[{user_id:'user-test',pic:'JACK',role:overrides.role||'editor'}]);
+    if(options.method==='POST')return response(JSON.parse(options.body));
     if(options.method==='PATCH'){const expected=Number(new URL(url).searchParams.get('revision')?.slice(3));if(stored.revision!==expected)return response([]);stored={...JSON.parse(options.body)};return response([stored]);}
     return response([stored]);
   };
   try{await work({requests,getStored:()=>stored});}finally{global.fetch=original.fetch;for(const [key,value] of [['SUPABASE_URL',original.url],['SUPABASE_SERVICE_ROLE_KEY',original.key]])if(value===undefined)delete process.env[key];else process.env[key]=value;}
 }
 test('missing backend is honest and never saves',()=>withBackend(async()=>{delete process.env.SUPABASE_URL;const status=await run(sessionHandler,request());assert.equal(status.body.configured,false);const save=await run(callsHandler,request('POST',{call:calls[0],revision:0}));assert.equal(save.status,503);assert.equal(save.body.saved,false);}));
-test('shared workspace reads do not require a login session',()=>withBackend(async({requests})=>{const req=request();req.headers.cookie='';const result=await run(callsHandler,req);assert.equal(result.status,200);assert.equal(requests.length,1);assert.ok(!requests[0].url.includes('/auth/v1/user'));}));
+test('shared workspace reads do not require a login session',()=>withBackend(async({requests})=>{const req=request();req.headers.cookie='';const result=await run(callsHandler,req);assert.equal(result.status,200);assert.equal(result.body.calls.length,42);assert.equal(requests.length,2);assert.ok(!requests.some(item=>item.url.includes('/auth/v1/user')));}));
 test('shared saves skip auth and membership lookups while retaining server-side revision checks',()=>withBackend(async({requests,getStored})=>{
   const changed={...calls[0],notes:'Autosaved without sign-in'};
   const result=await run(callsHandler,request('PATCH',{call:changed,revision:1}));

@@ -20,17 +20,18 @@ function defaultCalls() {
   }));
 }
 
-async function seedWorkspaceIfEmpty(rows) {
-  if (rows.length) return rows;
+async function seedMissingWorkspaceCalls(rows) {
+  const present = new Set(rows.map(row => row.id));
+  const missing = defaultCalls().filter(call => !present.has(call.id));
+  if (!missing.length) return rows;
   const now = new Date().toISOString();
-  const defaults = defaultCalls();
   const seed = await backend('/rest/v1/hyopu_port_calls?on_conflict=id', {
     method: 'POST',
     headers: { Prefer: 'resolution=ignore-duplicates,return=representation' },
-    body: JSON.stringify(defaults.map(data => ({ id: data.id, data, revision: 1, updated_at: now }))),
+    body: JSON.stringify(missing.map(data => ({ id: data.id, data, revision: 1, updated_at: now }))),
   });
   if (!seed.ok) throw new Error('기본 ETA 데이터를 저장하지 못했습니다.');
-  return await seed.json();
+  return [...rows, ...await seed.json()];
 }
 module.exports = async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
@@ -44,7 +45,7 @@ module.exports = async function handler(req,res) {
       const result=await backend(`/rest/v1/hyopu_port_calls?select=id,data,revision,updated_at${id?`&id=eq.${encodeURIComponent(id)}`:'&order=id.asc&limit=1000'}`);
       if(!result.ok)return json(res,502,{error:'선박 목록을 불러오지 못했습니다.'});
       let rows=await result.json();
-      if (!id) rows=await seedWorkspaceIfEmpty(rows);
+      if (!id) rows=await seedMissingWorkspaceCalls(rows);
       return json(res,200,{calls:rows.map(row=>({...row.data,id:row.id,revision:row.revision,updatedAt:row.updated_at}))});
     }
     const {call,revision}=req.body||{};
