@@ -1,7 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": { "api/documents.js": { "maxDuration": 30 }, "api/workspace.js": { "maxDuration": 30 }, "api/port-calls.js": { "maxDuration": 30 }, "api/eta-sync.js": { "maxDuration": 30 } },
-  "crons": [{ "path": "/api/eta-sync", "schedule": "10 23 * * *" }],
+  "functions": { "api/documents.js": { "maxDuration": 30 }, "api/workspace.js": { "maxDuration": 30 }, "api/port-calls.js": { "maxDuration": 30 }, "api/eta-import.js": { "maxDuration": 30 } },
   "headers": [{ "source": "/(.*)", "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }, { "key": "Referrer-Policy", "value": "same-origin" }, { "key": "X-Frame-Options", "value": "SAMEORIGIN" }] }]
 }

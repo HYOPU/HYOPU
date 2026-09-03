@@ -15,15 +15,15 @@
 
 Until these steps are complete the UI explicitly shows the source snapshot and unsaved drafts; automatic save is disabled. No localStorage/in-memory fallback pretends to be shared persistence. Draft JSON download is an explicit recovery tool, not cloud storage. Closing a dirty record or the page warns about losing changes.
 
-## Optional Microsoft Graph ETA sync
+## Power Automate ETA sync (no Entra admin consent)
 
-The `/api/eta-sync` Vercel Cron reads only the SharePoint workbook `KOREA ETA UPDATE 2020.08.31.xlsx`, parses the `ETA UPDATE` sheet, and upserts only changed ETA/ETD/PIC/status values while preserving per-vessel notes, cargo, VCR, tasks, and SOF data. It runs daily at about 08:10 KST (23:10 UTC; Vercel Hobby schedules are not minute-precise). It never exposes Graph credentials to the browser.
+The `/api/eta-import` endpoint accepts only a 10MB-or-smaller `.xlsx` file from Power Automate. It parses the `ETA UPDATE` sheet and upserts changed ETA/ETD/PIC/status values while preserving per-vessel notes, cargo, VCR, tasks, and SOF data. It never receives or stores a Microsoft password, browser cookie, or Graph credential.
 
-1. In Microsoft Entra, register a confidential application and grant **Microsoft Graph application permission** `Files.Read.All` with administrator consent. Limit the app to the intended SharePoint site with your organization's application-access policy where available.
-2. In Vercel Production, add `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID`, `GRAPH_CLIENT_SECRET`, `CRON_SECRET`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`. The site/drive/item values are discovered from the supplied HYOPU SharePoint URL by default; `GRAPH_ETA_SITE_ID`, `GRAPH_ETA_DRIVE_ID`, `GRAPH_ETA_ITEM_ID`, and `GRAPH_ETA_FILE_NAME` may be set to pin a specific file.
-3. Redeploy, then use Vercel Cron Jobs to invoke `/api/eta-sync`. A successful response includes `sourceRows`, `changed`, and `checkedAt`; a no-change run writes nothing.
+1. In Vercel Production, add `FLOW_SYNC_SECRET`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`. Keep `FLOW_SYNC_SECRET` only in the Power Automate connection/action and Vercel environment; never put it in the website.
+2. Create a Power Automate automated cloud flow: SharePoint **When a file is created or modified (properties only)** for the library/folder, a condition that the filename is `KOREA ETA UPDATE 2020.08.31.xlsx`, then SharePoint **Get file content** using the trigger file identifier.
+3. Add an HTTP `POST` action to `https://hyopu.vercel.app/api/eta-import`, with header `Authorization: Bearer <FLOW_SYNC_SECRET>` and the **File Content** output as the body. A successful response includes `sourceRows`, `changed`, and `checkedAt`; a no-change run writes nothing.
 
-The first live Graph run intentionally does not delete calls absent from the workbook, because those may contain historical notes or completed SOF work. Archive such calls only after operational review.
+The sync intentionally does not delete calls absent from the workbook, because those may contain historical notes or completed SOF work. Archive such calls only after operational review.
 
 ## Security and consistency
 
