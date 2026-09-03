@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {hydrateSeed,parseEta,calendarDays,shiftMonth,callsOnDay,inMonth,matchesFilters} from '../operations-model.mjs';
+import {hydrateSeed,parseEta,calendarDays,shiftMonth,callsOnDay,etaOrder,inMonth,matchesFilters} from '../operations-model.mjs';
 import {parseReport} from '../sof-parser.mjs';
 import validation from '../lib/call-validation.js';
+import etaSync from '../lib/eta-sync.js';
 import callsHandler from '../api/port-calls.js';
 import sessionHandler from '../api/workspace.js';
 const seed=JSON.parse(fs.readFileSync(new URL('../eta-seed.json',import.meta.url),'utf8'));
 const calls=hydrateSeed(seed);
+const { syncEtaRows } = etaSync;
 test('ETA source contains 42 distinct port calls, exact PIC counts and uncertainty',()=>{
   assert.equal(calls.length,42);assert.equal(new Set(calls.map(c=>c.id)).size,42);
   for(const [pic,count] of Object.entries({'DENNIS':9,'JAE LEE':15,'JACK':13,'RICK':5}))assert.equal(calls.filter(c=>matchesFilters(c,{pic})).length,count);
@@ -39,6 +41,27 @@ test('calendar orders each day by ETA, then uses AM/PM and vessel names as stabl
     {...calls[0],id:'middle',vessel:'MIDDLE',etaRaw:'09/05 AM',status:'PRE-ARRIVAL'},
   ];
   assert.deepEqual(callsOnDay(sample,day).map(call=>call.id),['early','middle','late','unknown']);
+  assert.deepEqual([...sample].sort(etaOrder).map(call=>call.id),['early','middle','late','unknown']);
+});
+test('hidden ETA snapshots do not appear in the calendar or ETA list filters',()=>{
+  assert.equal(matchesFilters({...calls[0],etaActive:false},{}),false);
+  assert.equal(matchesFilters({...calls[0],etaActive:true},{}),true);
+});
+test('Excel ETA snapshot updates voyage changes in place and hides removed source calls', async()=>{
+  const first={id:'eta-2026-001',data:{...calls[0],vessel:'STOLT TEST',voyage:'OLD 1',port:'ULSAN',etaRaw:'09/04 0800',notes:'Keep working notes',etaActive:true},revision:4};
+  const removed={id:'flow-eta-aaaaaaaaaaaaaaaaaaaaaaaa',data:{...calls[1],vessel:'REMOVED VESSEL',voyage:'OLD 2',port:'YOSU',etaRaw:'09/05 0800',etaActive:true},revision:2};
+  const posted=[];
+  const request=async(_url,options={})=>{
+    if (!options.method) return response([first,removed]);
+    posted.push(...JSON.parse(options.body));
+    return response([]);
+  };
+  const result=await syncEtaRows([{vessel:'STOLT TEST',voyage:'NEW 9',port:'ULSAN',etaRaw:'09/06 1100',etdRaw:'09/07 1200',pic:'JACK',remark:'IMPORT'}],request,'2026-09-04T01:00:00.000Z');
+  const updated=posted.find(row=>row.id===first.id);
+  const hidden=posted.find(row=>row.id===removed.id);
+  assert.equal(result.sourceRows,1);assert.equal(result.changed,2);assert.equal(result.hidden,1);
+  assert.equal(updated.data.voyage,'NEW 9');assert.equal(updated.data.notes,'Keep working notes');assert.equal(updated.data.etaActive,true);
+  assert.equal(hidden.data.etaActive,false);assert.equal(hidden.data.vessel,'REMOVED VESSEL');
 });
 test('all reference calls and genuine parser snapshots pass server validation',()=>{
   for(const call of calls)assert.equal(validation.validateCall(call),null);

@@ -16,7 +16,7 @@ function defaultCalls() {
     status: row.remark === 'INPORT' ? 'INPORT' : 'PRE-ARRIVAL',
     activities: [], activityNotes: '', cargo: [], crew: [], tasks: [], notes: '', proformaNotes: '',
     vcrFileName: '', latestReport: '', reportType: 'DEP.REPORT', reportReceived: '',
-    reportChecked: false, sof: null,
+    reportChecked: false, etaActive: true, sof: null,
   }));
 }
 
@@ -52,7 +52,7 @@ module.exports = async function handler(req,res) {
     const error=validateCall(call);if(error)return json(res,400,{saved:false,error});
     if(!Number.isInteger(revision)||revision<0)return json(res,400,{error:'저장 버전을 확인해 주세요.'});
     const data={};
-    for(const key of ['id','vessel','voyage','port','etaRaw','etdRaw','pic','status','year','notes','activityNotes','proformaNotes','vcrFileName','latestReport','reportType','reportReceived','reportChecked','activities','cargo','crew','tasks','sof','highlight'])if(call[key]!==undefined)data[key]=call[key];
+    for(const key of ['id','vessel','voyage','port','etaRaw','etdRaw','pic','status','year','notes','activityNotes','proformaNotes','vcrFileName','latestReport','reportType','reportReceived','reportChecked','etaActive','activities','cargo','crew','tasks','sof','highlight'])if(call[key]!==undefined)data[key]=call[key];
     const creating=req.method==='POST';
     if(creating && revision!==0)return json(res,400,{error:'신규 기록 버전이 올바르지 않습니다.'});
     const result=await backend(`/rest/v1/hyopu_port_calls${creating?'':`?id=eq.${encodeURIComponent(call.id)}&revision=eq.${revision}`}`,{

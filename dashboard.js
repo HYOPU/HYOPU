@@ -1,5 +1,5 @@
 import seedRows from './eta-seed.json';
-import { PICS, PORTS, hydrateSeed, parseEta, calendarDays, shiftMonth, matchesFilters, callsOnDay, inMonth } from './operations-model.mjs';
+import { PICS, PORTS, hydrateSeed, parseEta, calendarDays, shiftMonth, matchesFilters, callsOnDay, etaOrder, inMonth } from './operations-model.mjs';
 import { createVesselWorkspace } from './vessel-workspace.mjs';
 const $ = selector => document.querySelector(selector);
 export const esc = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
@@ -16,9 +16,10 @@ function card(call, day) {
 }
 function render() {
   const filtered = calls.filter(call => matchesFilters(call, filters));
-  const visible = view === 'list' && listAll ? filtered : filtered.filter(call => inMonth(call, month));
+  const visible = (view === 'list' && listAll ? filtered : filtered.filter(call => inMonth(call, month))).sort(etaOrder);
   const title = view === 'list' ? 'Korea ETA 리스트' : view === 'tasks' ? '업무 체크리스트' : '선박 운항 캘린더';
   $('#page-title').innerHTML = `${title}<span class="title-dot">.</span>`;
+  $('#page-description').textContent = view === 'list' ? 'ETA UPDATE 원본을 기준으로 최신 선박 일정을 관리합니다.' : view === 'calendar' ? 'ETA LIST를 미러링한 월간 일정입니다. 카드를 선택해 선박 업무를 확인하세요.' : '담당 선박의 업무를 한곳에서 확인합니다.';
   $('#breadcrumb').textContent = title;
   $('#month-title').textContent = view === 'list' && listAll ? '전체 ETA 일정' : `${month.slice(0, 4)}년 ${Number(month.slice(5))}월`;
   $('#all-dates').hidden = view !== 'list';
@@ -61,9 +62,12 @@ async function importEtaClipboard() {
     showToast('붙여넣은 ETA 표를 확인하고 공유 일정에 반영하는 중입니다…');
     const result = await api('/api/eta-paste', { method: 'POST', body: JSON.stringify({ text }) });
     await loadCalls();
+    view = 'list';
+    listAll = true;
+    render();
     $('#eta-paste-dialog').close();
     input.value = '';
-    showToast(`ETA 반영 완료 · 원본 ${result.sourceRows ?? 0}건 / 변경 ${result.changed ?? 0}건`);
+    showToast(`ETA 반영 완료 · 원본 ${result.sourceRows ?? 0}건 / 변경 ${result.changed ?? 0}건${result.hidden ? ` / 이전 ${result.hidden}건 숨김` : ''}`);
   } finally {
     submit.disabled = false;
   }

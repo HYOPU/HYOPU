@@ -12,7 +12,7 @@ export function parseEta(raw, year = 2026) {
   return { date: stamp.toISOString().slice(0, 10), time: /^\d/.test(clock) && !invalidTime ? `${clock.slice(0, 2)}:${clock.slice(2)}` : '', period: /AM|PM/i.test(clock) ? clock.toUpperCase() : '', uncertain: Boolean(match[4] || invalidTime) };
 }
 export function hydrateSeed(rows) {
-  return rows.map((row, i) => ({ ...row, id: `eta-2026-${String(i + 1).padStart(3, '0')}`, year: 2026, status: row.remark === 'INPORT' ? 'INPORT' : 'PRE-ARRIVAL', activities: [], activityNotes: '', cargo: [], crew: [], tasks: [], notes: '', proformaNotes: '', vcrFileName: '', latestReport: '', reportType: 'DEP.REPORT', reportReceived: '', reportChecked: false, sof: null, revision: 0 }));
+  return rows.map((row, i) => ({ ...row, id: `eta-2026-${String(i + 1).padStart(3, '0')}`, year: 2026, status: row.remark === 'INPORT' ? 'INPORT' : 'PRE-ARRIVAL', activities: [], activityNotes: '', cargo: [], crew: [], tasks: [], notes: '', proformaNotes: '', vcrFileName: '', latestReport: '', reportType: 'DEP.REPORT', reportReceived: '', reportChecked: false, etaActive: true, sof: null, revision: 0 }));
 }
 export function calendarDays(month) {
   const first = new Date(`${month}-01T00:00:00Z`), start = new Date(first);
@@ -23,10 +23,10 @@ export function calendarDays(month) {
 }
 export function shiftMonth(month, offset) { const day = new Date(`${month}-01T00:00:00Z`); day.setUTCMonth(day.getUTCMonth() + offset); return day.toISOString().slice(0, 7); }
 export function matchesFilters(call, { pic = '', port = '', query = '' } = {}) {
-  return (!pic || call.pic === pic) && (!port || call.port === port) && (!query || `${call.vessel} ${call.voyage}`.toLowerCase().includes(query.toLowerCase()));
+  return call.etaActive !== false && (!pic || call.pic === pic) && (!port || call.port === port) && (!query || `${call.vessel} ${call.voyage}`.toLowerCase().includes(query.toLowerCase()));
 }
 const koreaToday = () => new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-export function callsOnDay(calls, day, today = koreaToday()) {
+export function etaOrder(left, right) {
   const timeValue = call => {
     const eta = parseEta(call.etaRaw, call.year);
     if (eta.time) return Number(eta.time.replace(':', ''));
@@ -34,14 +34,15 @@ export function callsOnDay(calls, day, today = koreaToday()) {
     if (eta.period === 'PM') return 1700;
     return 9999;
   };
+  const leftEta = parseEta(left.etaRaw, left.year).date || '9999-12-31';
+  const rightEta = parseEta(right.etaRaw, right.year).date || '9999-12-31';
+  return leftEta.localeCompare(rightEta) || timeValue(left) - timeValue(right) || left.vessel.localeCompare(right.vessel) || left.voyage.localeCompare(right.voyage);
+}
+export function callsOnDay(calls, day, today = koreaToday()) {
   return calls.filter(call => {
     const eta = parseEta(call.etaRaw, call.year).date, etd = parseEta(call.etdRaw, call.year).date;
     return eta === day || Boolean(call.status === 'INPORT' && eta && eta < day && day <= (etd || today));
-  }).sort((left, right) => {
-    const leftEta = parseEta(left.etaRaw, left.year).date;
-    const rightEta = parseEta(right.etaRaw, right.year).date;
-    return leftEta.localeCompare(rightEta) || timeValue(left) - timeValue(right) || left.vessel.localeCompare(right.vessel) || left.voyage.localeCompare(right.voyage);
-  });
+  }).sort(etaOrder);
 }
 export function inMonth(call, month, today = koreaToday()) {
   const eta = parseEta(call.etaRaw, call.year).date, etd = parseEta(call.etdRaw, call.year).date;
