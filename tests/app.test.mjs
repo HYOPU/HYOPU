@@ -396,5 +396,6 @@ test('production build includes every local HTML asset and the actual fetched XL
   const builtTemplate = fs.readFileSync(path.join(root, 'dist/templates/agent-sof.xlsx'));
   assert.equal(builtTemplate.subarray(0, 2).toString(), 'PK');
   assert.deepEqual(builtTemplate, fs.readFileSync(path.join(root, 'templates/agent-sof.xlsx')));
+  assert.ok(fs.statSync(path.join(root, 'dist/hyop-woon-shipping-logo.png')).size > 0);
   assert.doesNotThrow(() => new vm.Script(fs.readFileSync(path.join(root, 'dist/app.js'), 'utf8')));
 });
