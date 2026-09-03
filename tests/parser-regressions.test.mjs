@@ -98,3 +98,30 @@ test('BETULA typed figures and June-to-July rollover remain unchanged', () => {
   assert.equal(result.cargo.find(value => value.number === '310').hoseOn, '2026-07-02T06:00');
   assert.equal(result.groups[2].leftBerth, '2026-07-01T02:44');
 });
+
+test('non-cargo layby carries prior hose off to ZI DING XIANG NOR and keeps cargo names clean', () => {
+  const result = parseReport([
+    'STOLT PERSEVERANCE / HBR 131 / ULSAN / DEP.REPORT', "AUG' 2026",
+    '26/1100 : EOSP', '1315 : BERTHED AT 20. P#42',
+    '(LOAD) CGO#155 EPICHLOROHYDRIN / 2,000MT(4CA)(WWT)',
+    'H/ON 27/1220 COMM 27/1620 COMP 28/0755 H/OFF 28/0850',
+    '1126 : LEFT FM P#42', '1245 : BERTHED AT 30. 1ST LAYBY BERTH(NLB#1)',
+    '0726 : LEFT FM NLB#1', '0905 : BERTHED AT 40. 2ND LAYBY BERTH(SBTS#1)',
+    'PORT SIDE - 1ST COASTER "ZI DING XIANG"(NORT 24/1600, A/S 29/1050)',
+    '(LOAD) CGO#160 ISOPRENE / 1,000MT(3CA)(ATIP)',
+    'H/ON 29/1315 COMM 29/1415 COMP 29/2130 H/OFF 29/2330',
+    '0804 : LEFT FM SBTS#1', '0845 : BERTHED AT 50. JSTT SP#5',
+    'CGO#145 VAM / 2,500MT(DT2S)(WWT) 31/1355 31/1540 01/0025 01/0320 2,500.200MT 2,499.872MT',
+    '0453 : LEFT FM JSTT SP#5', '0535 : BERTHED AT 60. 3RD LAYBY BERTH(SBTS#1)',
+    'PORT SIDE - 2ND COASTER "KEOYOUNG MASTER"(NORT 01/0500, A/S 01/0730)',
+    'CGO#110 MMA / 2,000MT(10CA)(WWT) 01/1855 01/1955 02/0215 02/0340 1,998.750MT 1,991.534MT',
+    'PORT SIDE - 3RD COASTER "WOORI HANA"(NORT 01/0700, A/S 02/0605)',
+    '(LOAD) CGO#165C ISOPRENE / 1,200MT(3P)(ATIP)', 'H/ON 02/0740 COMM 02/0800 ETC 02/1500',
+  ].join('\n'));
+  const bySheet = Object.fromEntries(result.groups.map(group => [group.sheetName, group]));
+  assert.equal(bySheet['ZI DING XIANG'].norTendered, '2026-08-28T08:50');
+  assert.equal(bySheet['JSTT SP5'].cargo[0].name, 'VAM');
+  assert.equal(bySheet['KEOYOUNG MASTER'].cargo[0].name, 'MMA');
+  assert.equal(bySheet['WOORI HANA'].cargo[0].name, 'ISOPRENE');
+  assert.ok(!result.groups.flatMap(group => group.remarks).some(value => /REVIEW REQUIRED|B\/L FIG not stated/i.test(value)));
+});

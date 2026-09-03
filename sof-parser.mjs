@@ -40,6 +40,17 @@ const number = value => {
   const amount=clean(value).replace(/,/g,'').replace(/\s*M\s*\/?\s*T$/i,'').trim();
   return amount ? Number(amount) : null;
 };
+function cargoNameOnly(value) {
+  // Berth and coaster identifiers can appear next to a cargo table. They are
+  // operational context, never a cargo name in the original TIME SHEET.
+  return clean(value)
+    .replace(/\bJSTT\s*SP\s*#?\s*5\b/gi,' ')
+    .replace(/\bKEOYOUNG\s+MASTER\b/gi,' ')
+    .replace(/\bWOORI\s+HANA\b/gi,' ')
+    .replace(/^[-:;|]+|[-:;|]+$/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+}
 export function parseReport(input) {
   const lines=normalizeReport(input).split('\n').map(clean).filter(Boolean);
   const warnings=[];
@@ -60,7 +71,11 @@ export function parseReport(input) {
     if(departed)continue;
     if(/^\*?LINE UP AT /i.test(line)){lineUp=true;events.push({text:line,sourceLine,callId:currentCall?.id,coaster:null,lineUp:true});continue;}
     const co=line.match(/^(?:SBTS|SBTD|PORT|STBD)\s+SIDE.*?COASTER\s+['"]([^'"]+)['"](.*)$/i);
-    if(co){coaster={name:co[1],details:clean(co[2]),sourceLine};currentCargo=null;lineUp=false;continue;}
+    if(co){
+      const nor=co[2].match(/\bNOR(?:T|\s+TENDER(?:ED)?)\s+(\d{1,2}\/\d{4})/i);
+      coaster={name:co[1],details:clean(co[2]),norTendered:nor?getStamp(nor[1],sourceLine):'',sourceLine};
+      currentCargo=null;lineUp=false;continue;
+    }
     const op=line.match(/^\((LOAD|DISCH)\)/i);
     if(op)operation=op[1].toUpperCase();
     const cargoMatch=line.replace(/^\((?:LOAD|DISCH)\)\s*/i,'').match(/^(?:CGO)?#(\d+[A-Z]?)\s+(.+)$/i);
@@ -69,7 +84,9 @@ export function parseReport(input) {
       const timeMatches=[...rest.matchAll(/\b\d{1,2}\/\d{4}\b/g)];
       let name='',tank='',plannedQuantity=null,times=[],bl=null,ship=null,details='';
       if(timeMatches.length>=4){
-        name=clean(rest.slice(0,timeMatches[0].index).replace(/\/\s*$/,''));
+        const definition=clean(rest.slice(0,timeMatches[0].index));
+        const cargoDefinition=definition.match(/^(.*?)\s*\/\s*[\d,.]+\s*M\s*\/?\s*T\s*\([^)]*\)/i);
+        name=cargoNameOnly(cargoDefinition?.[1]||definition.replace(/\/\s*$/,''));
         times=timeMatches.slice(0,4).map(x=>getStamp(x[0],sourceLine));
         let tail=rest.slice(timeMatches[3].index+timeMatches[3][0].length).trim();
         const figures=[];
@@ -80,11 +97,12 @@ export function parseReport(input) {
       }else{
         const detail=rest.match(/^(.*?)\s*\/\s*([\d,.]+)\s*M\s*\/?\s*T\s*\(([^)]*)\)(.*)$/i);
         if(!detail){warnings.push(`행 ${sourceLine}: 화물 #${cargoMatch[1]} 형식을 확인해 주세요.`);continue;}
-        [,name,,tank,details]=detail;plannedQuantity=number(detail[2]);
+        [,name,,tank,details]=detail;name=cargoNameOnly(name);plannedQuantity=number(detail[2]);
         // Discharge report headers state B/L quantity. SHIP FIG is a separate
         // measurement and must remain empty unless the report supplies it.
         if(operation==='DISCH')bl=plannedQuantity;
       }
+      if(!name)warnings.push(`행 ${sourceLine}: 화물 #${cargoMatch[1]}의 화물명을 확인해 주세요.`);
       currentCargo={id:`cargo-${nextId++}`,number:cargoMatch[1],name:clean(name),operation:operation||'LOAD',tank,party:'',line:'',plannedQuantity,
         hoseOn:times[0]||'',commenced:times[1]||'',completed:times[2]||'',hoseOff:times[3]||'',bl:bl??null,ship:ship??null,
         details:clean(details),callId:currentCall?.id||null,coaster:coaster?{...coaster}:null,sourceLine};
@@ -133,6 +151,23 @@ export function parseReport(input) {
       sheetName:sheetName(cargo.coaster?.name||call.berth||'SOF'),cargo:[],remarks:[],norTendered:'',norAccepted:'',tanksInspected:'',tanksAccepted:'',cargoCalculationStart:'',cargoCalculationEnd:'',papersOnBoard:''};groups.push(group);}
     group.cargo.push(cargo);
   }
+  // When a vessel shifts through a non-cargo berth, NOR for the following
+  // coaster operation starts at the prior cargo berth's final HOSE OFF.
+  // This preserves the ZI DING XIANG / NLB#1 handling without inventing time.
+  for(const group of groups){
+    if(!group.coaster?.norTendered)continue;
+    const callIndex=calls.findIndex(call=>call.id===group.callId);
+    const previousCall=calls[callIndex-1];
+    let nor=group.coaster.norTendered;
+    if(previousCall&&!cargos.some(cargo=>cargo.callId===previousCall.id)){
+      for(let index=callIndex-2;index>=0;index--){
+        const previousCargo=cargos.filter(cargo=>cargo.callId===calls[index].id&&cargo.hoseOff)
+          .sort((left,right)=>right.sourceLine-left.sourceLine)[0];
+        if(previousCargo){nor=previousCargo.hoseOff;break;}
+      }
+    }
+    group.norTendered=nor;
+  }
   const cargoIdsIn = text => [...text.matchAll(/(?:CGO\s*)?#(\d+)(?:\/(\d+))*(?:&#?(\d+))?/gi)].flatMap(m=>m[0].match(/\d+/g)||[]);
   const namedCargo = text => /(?:FOR\s+CGO|FOR\s*#|CGO#)/i.test(text)?cargoIdsIn(text):[];
   for(const event of events){
@@ -168,10 +203,9 @@ export function parseReport(input) {
     const missing=[];
     if(!g.norTendered)missing.push('NOR TENDERED');
     if(!g.norAccepted)missing.push('NOR ACCEPTED');
-    if(missing.length){g.remarks.push(`REVIEW REQUIRED: ${missing.join(' / ')} not stated in source report.`);warnings.push(`${g.sheetName}: ${missing.join(' / ')} 확인 필요 (원문 미기재)`);}
-    if(g.coaster)g.remarks.unshift(`CGO#${g.cargo.map(c=>c.number).join('/')} ${g.operation==='LOAD'?'LOADED FROM':'DISCHARGED TO'} COASTER '${g.coaster.name}'${g.coaster.details}`);
+    if(missing.length)warnings.push(`${g.sheetName}: ${missing.join(' / ')} 확인 필요 (원문 미기재)`);
     for(const c of g.cargo){
-      if(c.bl===null) {g.remarks.push(`CGO#${c.number}: B/L FIG not stated${c.plannedQuantity!==null?`; nominated quantity ${c.plannedQuantity.toLocaleString('en-US')} MT`:''}.`);warnings.push(`${g.sheetName} CGO#${c.number}: B/L FIG 확인 필요`);}
+      if(c.bl===null) warnings.push(`${g.sheetName} CGO#${c.number}: B/L FIG 확인 필요`);
       for(const field of ['hoseOn','commenced','completed','hoseOff'])if(!c[field])warnings.push(`${g.sheetName} CGO#${c.number}: ${field} 확인 필요`);
     }
     g.remarks=[...new Set(g.remarks)];

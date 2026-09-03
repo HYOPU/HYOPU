@@ -3,3 +3,16 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Source gaps are reviewed above the sheets; they never become REMARK text. */
+.warnings {
+  white-space: pre-line;
+  color: #991b1b;
+  background: #fff1f2;
+  border: 1px solid #dc2626;
+  padding: 14px;
+  font-size: 13px;
+  margin: 20px 0;
+}
+
+.warnings:empty { display: none; }
