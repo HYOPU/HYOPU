@@ -41,7 +41,7 @@ test('Excel Online script sends only the first sheet contiguous ETA table with i
   const message = await vm.runInContext('main(workbook)', context);
   assert.match(message, /1건 확인/);
   assert.equal(requests.length, 1);
-  assert.equal(requests[0].url, 'https://hyopu-ten.vercel.app/api/eta-import');
+  assert.equal(requests[0].url, 'https://hyopu-eta-sync.vercel.app/api/eta-import');
   assert.equal(requests[0].options.headers.Authorization, 'Bearer office-script-test-key');
   const body = JSON.parse(requests[0].options.body);
   assert.equal(body.rows.length, 2);
