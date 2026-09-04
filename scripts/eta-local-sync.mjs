@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const DEFAULT_ENDPOINT = 'https://hyopu.vercel.app/api/eta-import';
+export const DEFAULT_ENDPOINT = 'https://hyopu-ten.vercel.app/api/eta-import';
 export const DEFAULT_DELAY_MS = 45_000;
 
 export function parseArgs(args) {

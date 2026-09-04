@@ -1,6 +1,7 @@
 // No browser, HTTP request, file output, or backend write is performed.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { utils, write } from 'xlsx';
 import { createVesselWorkspace } from '../vessel-workspace.mjs';
 import { blankCall } from '../operations-model.mjs';
 
@@ -51,6 +52,10 @@ function harness(reload) {
     raw: text => callbacks['window:message']({origin:'https://review.invalid',source:frame.contentWindow,data:{type:'hyopu:sof-raw',callId:'A',raw:text}}),
     editNotes: value => callbacks.input({ target: { dataset: { field: 'notes' }, value, type: 'text' } }),
     editCargo: (key, value) => callbacks.input({ target: { dataset: { list: 'cargo', index: '0', key }, value, type: 'text' } }),
+    changeFile: file => {
+      const target={id:'vcr-file',files:[file],value:file.name};
+      return Promise.resolve(callbacks.change({target})).then(()=>target);
+    },
     get saved() { return saved; },
     restore() {
       for (const [key, value] of Object.entries(previousGlobals)) {
@@ -127,5 +132,36 @@ test('changing a proforma berth refreshes its known maximum draft before auto-sa
     await new Promise(resolve=>setTimeout(resolve,850));
     assert.equal(app.saved?.cargo[0].berth,'JSTT SP#5');
     assert.equal(app.saved?.cargo[0].maxDraft,'12.35M');
+  } finally { app.restore(); }
+});
+
+test('a Discharging VCR XLSX file is parsed in the vessel cargo workspace', async () => {
+  const app=harness(deferred());
+  try {
+    const rows=[
+      ['Voyage Cargo Report - Discharging'],[],
+      ['Discharge Port','Discharge Berth','Port ETA','Code','Cargo Name','Discharge Qty (MT)','Charterer','Tanks','Load Port - Berth(s)'],
+      ['ULSAN','P-62','10-Aug-2026','cs (13)','CARBITOL SOLVENT LOW G',208.928,'THE DOW CHEMICAL COMPANY','5C','BATON ROUGE - VPK PLAQ 1'],
+      ['ULSAN','JSTT2','10-Aug-2026','po (134)','PROPYLENE OXIDE',1503.829,'LYONDELL','8P, 8S','FREEPORT - BASF'],
+      ['YOKOHAMA','ANCHORAGE','12-Aug-2026','115','OTHER CARGO',500,'OTHER','1P','ULSAN - P-62'],
+    ];
+    const workbook=utils.book_new();
+    utils.book_append_sheet(workbook,utils.aoa_to_sheet(rows),'Discharge-Schedule');
+    const buffer=write(workbook,{bookType:'xlsx',type:'buffer'});
+    const file={
+      name:'VCR_STOLT CONFIDENCE_196_Discharging_10-Aug-2026.xlsx',
+      size:buffer.byteLength,
+      arrayBuffer:async()=>buffer.buffer.slice(buffer.byteOffset,buffer.byteOffset+buffer.byteLength),
+    };
+    await app.workspace.open('A');
+    await app.click('cargo',{tab:'cargo'});
+    const input=await app.changeFile(file);
+    assert.equal(input.value,'');
+    await new Promise(resolve=>setTimeout(resolve,850));
+    assert.equal(app.saved?.vcrFileName,file.name);
+    assert.deepEqual(app.saved?.cargo.map(item=>[item.operation,item.number,item.bl,item.ship,item.berth]),[
+      ['DISCH','cs (13)','208.928','','P-62'],
+      ['DISCH','po (134)','1503.829','','JSTT2'],
+    ]);
   } finally { app.restore(); }
 });

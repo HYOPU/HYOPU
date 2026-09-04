@@ -12,7 +12,7 @@ TXT 업로드 또는 이메일 붙여넣기 → 부두/코스터별 검토 → H
 
 Vercel Framework Preset은 **Other**, 빌드 명령은 `npm run build`, 출력 폴더는 `dist`입니다 (`vercel.json`에 설정). PR 브랜치에 push하면 Git 연동 프리뷰가 배포됩니다. `.github/workflows/verify.yml`이 파서/실제 XLSX 재열기 회귀 테스트와 빌드를 실행합니다.
 
-이 저장소의 프로젝트는 `HYOPU/HYOPU` → Vercel `hyopu1/sof-studio` → `https://sof-studio-five.vercel.app`입니다. `main` push는 운영 배포, 기능 브랜치는 프리뷰 배포 대상입니다. `jhmarine.kr`은 별도의 저장소/프로젝트이므로 이 프로젝트의 수정이나 배포 대상으로 사용하지 않습니다.
+이 저장소의 운영 경로는 `HYOPU/HYOPU` → Vercel `hestias-projects-57e91111/hyopu` → `https://hyopu-ten.vercel.app`입니다. 새 Vercel 프로젝트는 Git 자동 연결이 없으므로 검증된 `main` 커밋을 수동 배포·승격합니다. `jhmarine.kr`은 별도의 저장소/프로젝트이므로 이 프로젝트의 수정이나 배포 대상으로 사용하지 않습니다.
 
 브라우저 진입점은 `app.js`이며 검증된 `sof-parser.mjs`, `sof-workbook.mjs`, `sof-export.mjs`를 직접 import합니다. 리포트 분석 버튼과 실제 번들 실행을 함께 회귀 테스트하여, 파서 테스트만 통과하고 화면에서는 작동하지 않는 문제를 방지합니다. 배포에 필요한 CSS와 `templates/agent-sof.xlsx`는 빌드 산출물에 함께 포함됩니다.
 

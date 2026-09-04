@@ -1,5 +1,5 @@
 import { PICS, PORTS, STATUSES, blankCall } from './operations-model.mjs';
-import { parseVcrClipboard, vesselNameForSof } from './vcr-parser.mjs';
+import { parseVcrClipboard, parseVcrWorkbook, vesselNameForSof } from './vcr-parser.mjs';
 import { maxDraftForBerth } from './berth-drafts.mjs';
 import validation from './lib/call-validation.js';
 const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
@@ -92,7 +92,7 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
   function renderPanel() {
     let content='';
     if(tab==='overview') content=`<div class="detail-section-heading"><div><h3>Port call details</h3><p>같은 선박·항차라도 항만별 업무 기록은 독립적으로 관리합니다.</p></div></div><div class="detail-grid">${field('vessel','VESSEL')}${field('voyage','VOYAGE')}${field('port','PORT','text',PORTS)}${field('pic','담당자 · PIC','text',PICS)}${field('year','기준 연도','number')}${field('etaRaw','ETA / ARRIVED (LT)')}${field('etdRaw','ETD (LT)')}${field('status','현재 상태','text',STATUSES)}</div><p class="field-hint">일시 표기: MM/DD HHmm · AM/PM · ?? 유지 / 시각 미정은 날짜만 입력</p><div class="note-heading"><h3>업무 메모</h3><span>THIS PORT CALL ONLY</span></div><textarea data-field="notes" rows="8" placeholder="접안 계획, 주의사항, 인계할 내용 등을 자유롭게 기록하세요.">${esc(draft.notes)}</textarea>`;
-    else if(tab==='cargo') content=`<div class="detail-section-heading"><div><h3>VCR · Voyage Cargo Report</h3><p>VCR Loading 또는 Discharging 표를 Excel에서 복사해 붙여넣으면 이 입항 항만(${esc(draft.port)})의 화물을 반영합니다.</p></div></div><div class="vcr-paste"><label for="vcr-paste-text"><strong>VCR Excel 표 붙여넣기</strong><span>Loading: Load Port · Load Berth · Quantity (MT) / Discharging: Discharge Port · Discharge Berth · Discharge Quantity (MT) 열을 포함해 복사하세요.</span></label><textarea id="vcr-paste-text" rows="7" placeholder="Excel에서 VCR Loading 또는 Discharging 표를 복사해 붙여넣으세요."></textarea><div class="form-actions"><button id="vcr-paste-import" class="primary">붙여넣은 VCR 화물 반영</button></div></div>${draft.sof?'<button id="import-sof-cargo" class="subtle" style="margin-bottom:16px">SOF 분석 화물 가져오기</button>':''}${renderRows('cargo')}`;
+    else if(tab==='cargo') content=`<div class="detail-section-heading"><div><h3>VCR · Voyage Cargo Report</h3><p>VCR Loading 또는 Discharging XLSX를 선택하거나 Excel 표를 붙여넣으면 이 입항 항만(${esc(draft.port)})의 화물을 반영합니다.</p></div><label class="subtle file-label">VCR XLSX 불러오기<input id="vcr-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label></div>${draft.vcrFileName?`<p class="field-hint">최근 VCR: ${esc(draft.vcrFileName)} · 원본 파일은 서버에 보관하지 않습니다.</p>`:''}<div class="vcr-paste"><label for="vcr-paste-text"><strong>또는 VCR Excel 표 붙여넣기</strong><span>Loading: Load Port · Load Berth · Quantity (MT) / Discharging: Discharge Port · Discharge Berth · Discharge Qty (MT) 또는 Discharge Quantity (MT) 열을 포함해 복사하세요.</span></label><textarea id="vcr-paste-text" rows="7" placeholder="Excel에서 VCR Loading 또는 Discharging 표를 복사해 붙여넣으세요."></textarea><div class="form-actions"><button id="vcr-paste-import" class="primary">붙여넣은 VCR 화물 반영</button></div></div>${draft.sof?'<button id="import-sof-cargo" class="subtle" style="margin-bottom:16px">SOF 분석 화물 가져오기</button>':''}${renderRows('cargo')}`;
     else if(tab==='proforma') content=renderProforma();
     else if(definitions[tab]) content=renderRows(tab);
     else content=`<div class="detail-section-heading"><div><h3>SOF 생성</h3><p>리포트 입력·분석·SOF 생성·파일 출력은 이 한 곳에서 처리합니다. 협운해운 원본 서식은 그대로 유지됩니다.</p></div>${draft.sof?'<span class="status-tag inport">분석 기록 연결됨</span>':''}</div><div class="sof-context"><strong>${esc(vesselNameForSof(draft.vessel)) || '선박명 입력 필요'} / ${esc(draft.voyage) || '항차 입력 필요'} / ${esc(draft.port) || '항만 입력 필요'}</strong><span>선박 페이지의 선박명·항차·항만이 SOF에 자동 적용됩니다.</span></div><p id="sof-link-status" class="sof-link-status">리포트 분석 후 이 입항 건과 일치하는 결과만 연결합니다.</p><iframe id="sof-frame" title="선박별 SOF 생성" src="/sof.html?embedded=1"></iframe>`;
@@ -130,6 +130,25 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
       if(list==='cargo'&&key==='berth')row.maxDraft=maxDraftForBerth(row.berth);
     }
     if(field||list)markDirty();
+  });
+  dialog.addEventListener('change',async event=>{
+    if(event.target.id!=='vcr-file'||!draft||busy)return;
+    const input=event.target,file=input.files?.[0];if(!file)return;
+    if(!/\.xlsx$/i.test(file.name)){input.value='';updateSaveStatus('VCR는 .xlsx 파일만 불러올 수 있습니다.');return;}
+    if(file.size>10*1024*1024){input.value='';updateSaveStatus('VCR 파일은 10MB 이하로 선택해 주세요.');return;}
+    const ticket=generation,callId=draft.id;busy=true;updateSaveStatus('VCR XLSX를 읽는 중…');
+    try{
+      const bytes=new Uint8Array(await file.arrayBuffer());
+      if(ticket!==generation||draft?.id!==callId)return;
+      if(bytes[0]!==0x50||bytes[1]!==0x4b)throw new Error('올바른 XLSX 파일이 아닙니다.');
+      const {read,utils}=await import('xlsx');
+      const cargo=parseVcrWorkbook(read(bytes,{type:'array',cellDates:false}),sheet=>utils.sheet_to_json(sheet,{header:1,defval:'',raw:false}),{port:draft.port});
+      if(ticket!==generation||draft?.id!==callId)return;
+      if(draft.cargo.length&&!await confirmDiscard(`현재 화물 ${draft.cargo.length}건을 VCR 화물 ${cargo.length}건으로 바꿀까요?`))return;
+      if(ticket!==generation||draft?.id!==callId)return;
+      draft.cargo=cargo;draft.vcrFileName=file.name;markDirty();renderPanel();updateSaveStatus(`VCR 양하/적하 화물 ${cargo.length}건을 반영했습니다.`);
+    }catch(error){if(ticket===generation)updateSaveStatus(`VCR 파일을 읽지 못했습니다: ${error.message||'형식을 확인해 주세요.'}`);
+    }finally{input.value='';if(ticket===generation){busy=false;const message=$('#save-status').textContent;updateSaveStatus(message);queueAutoSave();}}
   });
   dialog.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button||!draft||busy)return;
