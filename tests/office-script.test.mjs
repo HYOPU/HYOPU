@@ -19,6 +19,11 @@ const worksheet = (name, rows) => ({
   getUsedRange: () => ({ getTexts: () => rows }),
 });
 
+test('Excel Online script uses arrow functions for array method callbacks', () => {
+  assert.doesNotMatch(source, /\.map\(\s*normalize\s*\)/);
+  assert.match(source, /row\.map\(value\s*=>\s*normalize\(value\)\)/);
+});
+
 test('Excel Online script sends only the first sheet contiguous ETA table with its dedicated key', async () => {
   const requests = [];
   const context = await compiledContext(async (url, options) => {

@@ -28,7 +28,7 @@ async function main(workbook: ExcelScript.Workbook): Promise<string> {
   if (!usedRange) throw new Error('ETA UPDATE 시트가 비어 있습니다.');
   const values = usedRange.getTexts();
   const headerIndex = values.findIndex(row => {
-    const headings = row.map(normalize);
+    const headings = row.map(value => normalize(value));
     return headings.includes('VESSEL') && headings.some(value => value === 'VOY' || value === 'VOYAGE')
       && headings.includes('PORT') && headings.some(value => value === 'ETAARRIVED' || value === 'ETA')
       && headings.includes('PIC');
