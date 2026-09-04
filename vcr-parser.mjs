@@ -1,9 +1,12 @@
 const text = value => String(value ?? '').trim();
 const key = value => text(value).toUpperCase().replace(/[^A-Z0-9]/g, '');
 const quantity = value => {
-  const number = Number(String(value ?? '').replace(/,/g, ''));
+  const source = text(value).replace(/,/g, '');
+  if (!source) return '';
+  const number = Number(source);
   return Number.isFinite(number) ? String(number) : '';
 };
+const dischargeQuantityKeys = ['DISCHARGEQUANTITYMT', 'DISCHARGEQTYMT'];
 
 export function vesselNameForSof(value) {
   const vessel = text(value).toUpperCase();
@@ -12,22 +15,23 @@ export function vesselNameForSof(value) {
 }
 
 function headerMap(rows) {
-  const rowIndex = rows.findIndex(row => row.some(cell => key(cell) === 'CARGONAME') && row.some(cell => ['QUANTITYMT', 'DISCHARGEQUANTITYMT'].includes(key(cell))));
+  const rowIndex = rows.findIndex(row => row.some(cell => key(cell) === 'CARGONAME') && row.some(cell => ['QUANTITYMT', ...dischargeQuantityKeys].includes(key(cell))));
   if (rowIndex < 0) throw new Error('VCR의 Loading 또는 Discharging 화물 헤더를 찾지 못했습니다.');
   const indexes = Object.fromEntries(rows[rowIndex].map((cell, index) => [key(cell), index]));
+  const dischargeQuantity = dischargeQuantityKeys.find(name => indexes[name] !== undefined);
   const operation = ['LOADPORT', 'LOADBERTH', 'QUANTITYMT'].every(required => indexes[required] !== undefined) ? 'LOAD'
-    : ['DISCHARGEPORT', 'DISCHARGEBERTH', 'DISCHARGEQUANTITYMT'].every(required => indexes[required] !== undefined) ? 'DISCH' : '';
+    : indexes.DISCHARGEPORT !== undefined && indexes.DISCHARGEBERTH !== undefined && dischargeQuantity ? 'DISCH' : '';
   if (!operation) throw new Error('VCR의 Loading 또는 Discharging 항만·선석·수량 열을 찾지 못했습니다.');
   for (const required of ['CARGONAME', 'CODE', 'TANKS', 'CHARTERER']) {
     if (indexes[required] === undefined) throw new Error(`VCR의 ${required} 열을 찾지 못했습니다.`);
   }
-  return { rowIndex, indexes, operation };
+  return { rowIndex, indexes, operation, dischargeQuantity };
 }
 
 export function parseVcrRows(rows, { port = '' } = {}) {
-  const { rowIndex, indexes, operation } = headerMap(rows);
+  const { rowIndex, indexes, operation, dischargeQuantity } = headerMap(rows);
   const fields = operation === 'LOAD' ? { port: 'LOADPORT', berth: 'LOADBERTH', quantity: 'QUANTITYMT', counterpart: 'DISCHARGEPORTBERTHS' }
-    : { port: 'DISCHARGEPORT', berth: 'DISCHARGEBERTH', quantity: 'DISCHARGEQUANTITYMT', counterpart: 'LOADPORTBERTHS' };
+    : { port: 'DISCHARGEPORT', berth: 'DISCHARGEBERTH', quantity: dischargeQuantity, counterpart: 'LOADPORTBERTHS' };
   const targetPort = key(port);
   const source = rows.slice(rowIndex + 1).map(row => ({
     sourcePort: text(row[indexes[fields.port]]), berth: text(row[indexes[fields.berth]]), number: text(row[indexes.CODE]),
