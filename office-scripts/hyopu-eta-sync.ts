@@ -10,7 +10,9 @@ interface HyopuSyncResponse {
 // Replace only this placeholder inside Excel for the web. Never commit the
 // real FLOW_SYNC_SECRET to GitHub.
 const HYOPU_SYNC_KEY = 'PASTE_FLOW_SYNC_SECRET_HERE';
-const HYOPU_ENDPOINT = 'https://hyopu-ten.vercel.app/api/eta-import';
+// Dedicated alias: stays on the CORS-enabled import deployment even when the
+// main HYOPU production alias is promoted by another feature deployment.
+const HYOPU_ENDPOINT = 'https://hyopu-eta-sync.vercel.app/api/eta-import';
 
 /** Read the first ETA UPDATE(SC포함) sheet and sync it directly to HYOPU. */
 async function main(workbook: ExcelScript.Workbook): Promise<string> {
