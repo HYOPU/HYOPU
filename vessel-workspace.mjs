@@ -1,6 +1,7 @@
 import { PICS, PORTS, STATUSES, blankCall } from './operations-model.mjs';
 import { parseVcrClipboard, parseVcrWorkbook, vesselNameForSof } from './vcr-parser.mjs';
 import { maxDraftForBerth } from './berth-drafts.mjs';
+import { learnedMaxDraft } from './operational-learning.mjs';
 import validation from './lib/call-validation.js';
 const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const definitions = {
@@ -13,9 +14,6 @@ const proformaBerth = cargo => {
   const match=String(cargo.note||'').match(/^VCR\s*·\s*[^/]+\/\s*([^→]+?)(?:\s*→|$)/i);
   return match ? match[1].trim() : String(cargo.note||'');
 };
-const proformaMaxDraft = cargo => typeof cargo.maxDraft === 'string' && cargo.maxDraft.trim()
-  ? cargo.maxDraft
-  : maxDraftForBerth(proformaBerth(cargo));
 const quantity = value => {
   const number=Number(String(value||'').replaceAll(',',''));
   return Number.isFinite(number) ? number.toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}) : '';
@@ -31,7 +29,7 @@ function confirmAction(message) {
     prompt.showModal();
   });
 }
-export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, confirmDiscard = confirmAction }) {
+export function createVesselWorkspace({ getCall, getSession, getLearning = () => [], saveCall, onSaved, confirmDiscard = confirmAction }) {
   const dialog=document.querySelector('#vessel-dialog');
   let draft=null, dirty=false, tab='overview', original=null, busy=false, opener=null, generation=0, startNewSof=false, autoSaveTimer=null;
   const $=selector=>dialog.querySelector(selector);
@@ -77,7 +75,11 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
   }
   function renderProforma() {
     const total=draft.cargo.reduce((sum,cargo)=>sum+(Number(String(cargo.bl||'').replaceAll(',',''))||0),0);
-    return `<div class="detail-section-heading"><div><h3>PROFORMA</h3><p>화물 정보의 CGO#, CHRTR / RCVR, 화물명, 수량, BERTH, COASTER를 자동 반영합니다. 부두를 바꾸면 등록된 MAX DRAFT가 자동 입력되며 직접 수정할 수 있습니다.</p></div><button id="proforma-print" class="primary">인쇄 / PDF 저장</button></div><section id="proforma-sheet" class="proforma-sheet"><h4>${esc(proformaHeading())}</h4><div class="detail-table-scroll"><table class="proforma-table"><thead><tr><th>CGO#</th><th>CHRTR/RCVR</th><th>CGO NAME</th><th>Q'TY</th><th>BERTH</th><th>MAX DRAFT</th><th>COASTER</th></tr></thead><tbody>${draft.cargo.map((cargo,index)=>`<tr><td><input data-list="cargo" data-index="${index}" data-key="number" value="${esc(cargo.number)}"></td><td><input data-list="cargo" data-index="${index}" data-key="party" value="${esc(cargo.party)}"></td><td><input data-list="cargo" data-index="${index}" data-key="name" value="${esc(cargo.name)}"></td><td class="proforma-quantity">${esc(quantity(cargo.bl))}</td><td><input data-list="cargo" data-index="${index}" data-key="berth" value="${esc(proformaBerth(cargo))}" placeholder="BERTH"></td><td><input class="proforma-draft" data-list="cargo" data-index="${index}" data-key="maxDraft" value="${esc(proformaMaxDraft(cargo))}" placeholder="확인 필요" aria-label="MAX DRAFT ${index+1}"></td><td><input data-list="cargo" data-index="${index}" data-key="coaster" value="${esc(cargo.coaster)}" placeholder="COASTER"></td></tr>`).join('')}</tbody></table></div><p class="proforma-total">${esc(quantity(total))}</p><label class="proforma-notes"><span>NOTES</span><textarea data-field="proformaNotes" rows="5" placeholder="PROFORMA 관련 특이사항을 기록하세요.">${esc(draft.proformaNotes||'')}</textarea></label>${draft.cargo.length?'':'<div class="empty compact"><strong>화물 정보가 없습니다</strong>화물 정보 탭에서 VCR 표를 붙여넣거나 화물을 입력해 주세요.</div>'}</section>`;
+    const learning=getLearning(draft.port);
+    const knownMaxDraft=berth=>learnedMaxDraft(berth,learning)||maxDraftForBerth(berth);
+    const maxDraft=cargo=>typeof cargo.maxDraft==='string'&&cargo.maxDraft.trim()?cargo.maxDraft:knownMaxDraft(proformaBerth(cargo));
+    const learningPanel=learning.length?`<aside class="proforma-learning"><strong>운항 학습 · ${esc(draft.port)} 부두 참고값</strong><span>이전 SOF/출항 리포트 분석과 확정 PROFORMA에서 저장된 값입니다. 터미널 최신 제한은 직접 확인해 주세요.</span><div>${learning.map(item=>`<p><b>${esc(item.berth)}</b><em>${esc(item.maxDraft)}</em><small>${esc(item.source)} · ${esc(item.vessel)} / ${esc(item.voyage)}</small></p>`).join('')}</div></aside>`:'';
+    return `<div class="detail-section-heading"><div><h3>PROFORMA</h3><p>화물 정보의 CGO#, CHRTR / RCVR, 화물명, 수량, BERTH, COASTER를 자동 반영합니다. 부두를 바꾸면 학습된 값 또는 등록된 MAX DRAFT가 자동 입력되며 직접 수정할 수 있습니다.</p></div><button id="proforma-print" class="primary">인쇄 / PDF 저장</button></div><section id="proforma-sheet" class="proforma-sheet"><h4>${esc(proformaHeading())}</h4><div class="detail-table-scroll"><table class="proforma-table"><thead><tr><th>CGO#</th><th>CHRTR/RCVR</th><th>CGO NAME</th><th>Q'TY</th><th>BERTH</th><th>MAX DRAFT</th><th>COASTER</th></tr></thead><tbody>${draft.cargo.map((cargo,index)=>`<tr><td><input data-list="cargo" data-index="${index}" data-key="number" value="${esc(cargo.number)}"></td><td><input data-list="cargo" data-index="${index}" data-key="party" value="${esc(cargo.party)}"></td><td><input data-list="cargo" data-index="${index}" data-key="name" value="${esc(cargo.name)}"></td><td class="proforma-quantity">${esc(quantity(cargo.bl))}</td><td><input data-list="cargo" data-index="${index}" data-key="berth" value="${esc(proformaBerth(cargo))}" placeholder="BERTH"></td><td><input class="proforma-draft" data-list="cargo" data-index="${index}" data-key="maxDraft" value="${esc(maxDraft(cargo))}" placeholder="확인 필요" aria-label="MAX DRAFT ${index+1}"></td><td><input data-list="cargo" data-index="${index}" data-key="coaster" value="${esc(cargo.coaster)}" placeholder="COASTER"></td></tr>`).join('')}</tbody></table></div><p class="proforma-total">${esc(quantity(total))}</p>${learningPanel}<label class="proforma-notes"><span>NOTES</span><textarea data-field="proformaNotes" rows="5" placeholder="PROFORMA 관련 특이사항을 기록하세요.">${esc(draft.proformaNotes||'')}</textarea></label>${draft.cargo.length?'':'<div class="empty compact"><strong>화물 정보가 없습니다</strong>화물 정보 탭에서 VCR 표를 붙여넣거나 화물을 입력해 주세요.</div>'}</section>`;
   }
   function printProforma() {
     const table=$('#proforma-sheet');if(!table)return;
@@ -127,7 +129,7 @@ export function createVesselWorkspace({ getCall, getSession, saveCall, onSaved, 
     if(list){
       const row=draft[list][Number(index)];
       row[key]=event.target.type==='checkbox'?event.target.checked:event.target.value;
-      if(list==='cargo'&&key==='berth')row.maxDraft=maxDraftForBerth(row.berth);
+      if(list==='cargo'&&key==='berth')row.maxDraft=learnedMaxDraft(row.berth,getLearning(draft.port))||maxDraftForBerth(row.berth);
     }
     if(field||list)markDirty();
   });

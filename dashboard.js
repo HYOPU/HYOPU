@@ -1,6 +1,7 @@
 import seedRows from './eta-seed.json';
 import { PICS, PORTS, hydrateSeed, parseEta, calendarDays, shiftMonth, matchesFilters, matchesDepartedFilters, callsOnDay, etaOrder, inMonth } from './operations-model.mjs';
 import { createVesselWorkspace } from './vessel-workspace.mjs';
+import { buildOperationalLearning } from './operational-learning.mjs';
 const $ = selector => document.querySelector(selector);
 export const esc = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -83,6 +84,7 @@ function connectionStatus() {
 async function loadCalls() {const result=await api('/api/port-calls');calls=result.calls;render();}
 const workspace=createVesselWorkspace({
   getCall:(id,refresh=false)=>refresh?api(`/api/port-calls?id=${encodeURIComponent(id)}`).then(result=>result.calls[0]):calls.find(call=>call.id===id),
+  getLearning:port=>buildOperationalLearning(calls,port),
   getSession:()=>session,
   saveCall:async(call,creating)=>{const response=await api('/api/port-calls',{method:creating?'POST':'PATCH',body:JSON.stringify({call,revision:call.revision})});if(!response.saved)throw new Error('공유 저장을 확인하지 못했습니다.');return response.call;},
   onSaved:call=>{const index=calls.findIndex(item=>item.id===call.id);if(index<0)calls.push(call);else calls[index]=call;render();},

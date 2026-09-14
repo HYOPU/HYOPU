@@ -30,6 +30,20 @@ const cargoFields = [
 const timeFields = new Set([...facts.map(([key]) => key), 'hoseOn', 'commenced', 'completed', 'hoseOff']);
 const hasCargo = () => Boolean(state?.groups.some(group => group.cargo.length));
 const status = message => { $('#status').textContent = message; };
+const preBerthFields = [
+  ['eosp', 'EOSP (ETA)'], ['outPortLimit', 'OUT PORT LIMIT'], ['e2Anch', 'E-2 ANCH'], ['nort', 'NORT'],
+  ['pob', 'POB'], ['anchorAweigh', 'ANCHOR AWEIGH'], ['leftPreviousBerth', 'LEFT PREVIOUS BERTH'],
+];
+
+function renderSchedule() {
+  const schedule = state.preBerth || {};
+  const intermediate = state.intermediateSchedules || [];
+  return `<section class="pre-berth-schedule" aria-label="10번 작업 전 입항 시간">
+    <div class="schedule-heading"><div><p class="eyebrow">PRE-BERTH SCHEDULE</p><h2>10. 작업 전 확인 시간</h2><p>EOSP, OPL, ANCH, NORT는 첫 작업 10번의 시작 전 항해·대기 시간입니다. H/SEA 클리닝 후 재입항 시에도 아래 값을 추가·수정하세요.</p></div><span>LT · LOCAL TIME</span></div>
+    <div class="pre-berth-grid">${preBerthFields.map(([key, label]) => `<label><span>${label}</span><input data-schedule="${key}" aria-label="${label}" value="${esc(displayTime(schedule[key] || ''))}" placeholder="DD/HHmm"></label>`).join('')}</div>
+    ${intermediate.length ? `<div class="intermediate-schedules"><strong>중간 작업 일정</strong><p>H/SEA, 클리닝, LAYBY 등은 다음 부두 작업과 분리하지 않고 하나의 항차 일정으로 보관합니다.</p>${intermediate.map((item, index) => `<article class="intermediate-item"><b>${index + 1}.</b><time>${esc(displayTime(item.at || ''))}${item.end ? ` ~ ${esc(displayTime(item.end))}` : ''}</time><span>${esc(item.text)}</span></article>`).join('')}</div>` : ''}
+  </section>`;
+}
 
 function showReport(report, name) {
   state = applyWorkspaceFields(report);
@@ -46,7 +60,9 @@ function render() {
   $('#warnings').textContent = state.warnings.join('\n');
   $('#sheet-count').textContent = `${state.groups.length}개 작업 시트 · ${state.groups.reduce((sum, group) => sum + group.cargo.length, 0)}개 화물`;
   $('#download').disabled = !hasCargo();
-  $('#sheets').innerHTML = state.groups.map((group, index) => `<article class="sof-sheet" data-group="${index}">
+  // This block is deliberately above the first sheet: it is the part of the
+  // voyage that occurred before report item 10 / cargo work begins.
+  $('#sheets').innerHTML = `${renderSchedule()}${state.groups.map((group, index) => `<article class="sof-sheet" data-group="${index}">
     <div class="section-heading"><h2>${esc(group.sheetName)}</h2><span>${esc(group.operation)} · ${esc(group.berth)}</span></div>
     <div class="summary-grid">
       <label><span>SHEET NAME</span><input data-g="${index}" data-key="sheetName" value="${esc(group.sheetName)}"></label>
@@ -57,7 +73,7 @@ function render() {
     <div class="table-wrap"><table><thead><tr>${cargoFields.map(([, label]) => `<th>${label}</th>`).join('')}<th></th></tr></thead><tbody>${group.cargo.map((cargo, cargoIndex) => `<tr>${cargoFields.map(([key]) => `<td><input aria-label="${key}" data-g="${index}" data-c="${cargoIndex}" data-key="${key}" value="${esc(timeFields.has(key) ? displayTime(cargo[key]) : cargo[key])}" ${['bl', 'ship'].includes(key) ? 'inputmode="decimal" placeholder="미기재"' : ''}></td>`).join('')}<td><button data-remove="${cargoIndex}" data-g="${index}" class="delete" aria-label="화물 삭제">×</button></td></tr>`).join('')}</tbody></table></div>
     <button class="secondary add-cargo" data-add="${index}">+ 화물 추가</button>
     <label class="remarks-label">REMARKS (한 줄에 한 항목)<textarea data-g="${index}" data-key="remarks" rows="${Math.min(12, Math.max(3, group.remarks.length + 1))}">${esc(group.remarks.join('\n'))}</textarea></label>
-  </article>`).join('');
+  </article>`).join('')}`;
   publishSof();
 }
 
@@ -129,8 +145,15 @@ async function download() {
 $('#parse-text').onclick = analyzeText;
 $('#edit-report').onclick = () => { $('#report-panel').classList.remove('hidden'); $('#review-panel').classList.add('hidden'); status('리포트를 수정한 뒤 다시 분석해 주세요.'); };
 $('#review-panel').addEventListener('input', event => {
-  const { field, g, c, key } = event.target.dataset;
+  const { field, g, c, key, schedule } = event.target.dataset;
   if (field) { state.fields[field] = event.target.value; publishSof(); return; }
+  if (schedule) {
+    state.preBerth ??= {};
+    const reference = state.preBerth[schedule] || state.groups[0]?.berthAt || '';
+    state.preBerth[schedule] = resolveEditedTime(event.target.value, reference);
+    publishSof();
+    return;
+  }
   if (g === undefined || !key) return;
   const target = c === undefined ? state.groups[g] : state.groups[g].cargo[c];
   if (key === 'norTendered' && target.norTenderedAuto) { refreshNorFields(); return; }

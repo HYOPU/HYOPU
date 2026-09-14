@@ -1,6 +1,6 @@
 // Confirmed berth limits carried forward from completed port-call reports.
 // A blank result intentionally requires the operator to confirm and enter it.
-const normalize = value => String(value || '')
+export const normalizeBerth = value => String(value || '')
   .toUpperCase()
   .replace(/\s+/g, '')
   .replace(/#/g, '')
@@ -14,5 +14,5 @@ const limits = new Map([
 ]);
 
 export function maxDraftForBerth(berth) {
-  return limits.get(normalize(berth)) || '';
+  return limits.get(normalizeBerth(berth)) || '';
 }

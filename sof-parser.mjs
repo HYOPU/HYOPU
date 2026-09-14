@@ -35,10 +35,11 @@ export function resolveEditedTime(value, reference) {
   if(!/^\d{1,2}\/\d{4}$/.test(value||'')||!/^\d{4}-\d{2}-\d{2}/.test(reference||''))return value;
   return stamp(value,{year:+reference.slice(0,4),month:+reference.slice(5,7)-1,day:+reference.slice(8,10)},[],0)||value;
 }
-function parseBerth(text) {
+function parseBerthDetails(text) {
   let name=clean(text.replace(/^.*?BERTHED AT\s+(?:\d+\.\s*)?/i,'').split(/\(MAX\s+DRAFT/i)[0]);
   if(/LAYBY BERTH/i.test(name))name=name.match(/\(([^()]+)\)/)?.[1]||name;
-  return name;
+  const rawDraft=text.match(/\(\s*MAX\s+DRAFT\s+(\d+(?:\.\d+)?)\s*M?\b/i)?.[1] || '';
+  return {berth:name,maxDraft:rawDraft?`${Number(rawDraft).toFixed(2)}M`:''};
 }
 const sheetName = value => value.replace(/#/g,'').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31)||'SOF';
 const number = value => {
@@ -54,6 +55,39 @@ const cargoNameOnly = value => clean(value)
   .replace(/^[-:;|]+|[-:;|]+$/g, ' ')
   .replace(/\s+/g, ' ')
   .trim();
+
+// Navigation facts before the first cargo berth belong above item 10, not in
+// a berth's cargo rows. They can appear again after H/SEA tank cleaning.
+const preBerthFields = [
+  ['eosp', /\bEOSP\b/i],
+  ['outPortLimit', /\bOUT\s+PORT\s+LIMIT\b/i],
+  ['e2Anch', /\bE\s*[-–]?\s*2\s*ANCH(?:ORAGE)?\b/i],
+  ['nort', /\bNORT\b|\bNOR\s+TENDER(?:ED)?\b/i],
+  ['pob', /\bPOB\b/i],
+  ['anchorAweigh', /\bANCH(?:OR)?\s+AWEIGH\b/i],
+  ['leftPreviousBerth', /\bLEFT\s+(?:PREVIOUS\s+BERTH|FM)\b/i],
+];
+
+function preBerthSchedule(events) {
+  const schedule = Object.fromEntries(preBerthFields.map(([key]) => [key, '']));
+  // A coaster's NORT is not the vessel's NORT. Only inspect navigation up to
+  // the first berth, including a combined EOSP/"10. OUT PORT LIMIT" line.
+  const firstBerth = events.findIndex(event => /\bBERTHED\s+AT\b/i.test(event.text));
+  const navigation = events.slice(0, firstBerth < 0 ? events.length : firstBerth + 1);
+  for (const [key, pattern] of preBerthFields) {
+    const event = navigation.find(item => !item.coaster && pattern.test(item.text));
+    if (event?.at) schedule[key] = event.at;
+  }
+  return schedule;
+}
+
+function intermediateSchedules(events) {
+  const firstBerthLine = events.find(event => /\bBERTHED\s+AT\b/i.test(event.text))?.sourceLine || 0;
+  return events
+    .filter(event => event.sourceLine > firstBerthLine && !/\bPROCEED\s+TO\b/i.test(event.text))
+    .filter(event => !event.coaster && /\bH\/SEA\b|TANK\s+CLEANING|\bLAYBY\b|BUNKER\s+OPERATION|AWAITING\s+.*BERTH/i.test(event.text))
+    .map(event => ({ at: event.at || '', end: event.end || '', text: event.text, sourceLine: event.sourceLine }));
+}
 
 function validNorTime(value) {
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value || '')) {
@@ -202,7 +236,8 @@ export function parseReport(input) {
       if(/\bPOB\b/i.test(text))recentPilot=event;
       if(/LEFT FM/i.test(text)&&currentCall){currentCall.pilotOut=recentPilot?.at||'';currentCall.leftBerth=event.at;}
       if(/BERTHED AT/i.test(text)){
-        currentCall={id:`call-${nextId++}`,berth:parseBerth(text),berthAt:event.at,arrival,pilotIn:recentPilot?.at||'',pilotOut:'',leftBerth:'',sourceLine};
+        const berth=parseBerthDetails(text);
+        currentCall={id:`call-${nextId++}`,berth:berth.berth,maxDraft:berth.maxDraft,berthAt:event.at,arrival,pilotIn:recentPilot?.at||'',pilotOut:'',leftBerth:'',sourceLine};
         calls.push(currentCall);event.callId=currentCall.id;coaster=null;currentCargo=null;event.coaster=null;
       }
       if(/PROCEED TO.*H\/SEA/i.test(text)){currentCall=null;coaster=null;currentCargo=null;}
@@ -271,5 +306,10 @@ export function parseReport(input) {
     g.remarks=[...new Set(g.remarks)];
   }
   if(!groups.length)warnings.push('작업 시트를 만들 화물을 찾지 못했습니다. 입력 형식을 확인해 주세요.');
-  return applyNorTenderedRule({fields,groups,cargo:cargos,calls,events,warnings:[...new Set(warnings)]});
+  return applyNorTenderedRule({
+    fields, groups, cargo:cargos, calls, events,
+    preBerth: preBerthSchedule(events),
+    intermediateSchedules: intermediateSchedules(events),
+    warnings:[...new Set(warnings)],
+  });
 }
