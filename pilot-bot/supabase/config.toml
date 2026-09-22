@@ -1,0 +1,29 @@
+[functions.ulsan-pilot-watcher]
+# Retain gateway JWT verification as well as the private watcher-key check.
+verify_jwt = true
+
+[functions.hyopu-pilot-check]
+# Diagnostic POST also checks gateway-verified service-role claims and project ref.
+verify_jwt = true
+
+[functions.hyopu-pilot-setup]
+# Gateway verified service-role JWT plus a fixed project/account/room guard.
+verify_jwt = true
+
+[functions.telegram-webhook]
+# Telegram cannot send Supabase JWTs. This endpoint requires the Telegram
+# secret header and checks the allowed chat and actual sender separately.
+verify_jwt = false
+
+[functions.ulsan-pilot-registration]
+# Internal only: gateway JWT + private watcher key + approved DB request ID.
+verify_jwt = true
+
+[functions.pilot-miniapp]
+# Telegram signed initData + freshness + fixed allowed room + current participation.
+# Existing watcher/registration JWT settings are unchanged.
+verify_jwt = false
+
+[functions.ulsan-pilot-copy-source]
+# Read-only archive worker. Gateway JWT + existing internal watcher key.
+verify_jwt = true

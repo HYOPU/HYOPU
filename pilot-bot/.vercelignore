@@ -1,0 +1,8 @@
+.vercel
+.env*
+node_modules
+dist
+reports
+tests
+supabase
+PORT_MANIFEST.json

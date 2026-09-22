@@ -1,0 +1,665 @@
+{
+  "note": "Candidate port, not deployed. HYOPU contracts require independent verification. No operating data imported.",
+  "files": [
+    {
+      "source": "supabase/functions/pilot-miniapp/deno.json",
+      "target": "supabase/functions/pilot-miniapp/deno.json",
+      "sourceSha256": "0658d40b15a181c786def1b579d380a02196359ecbfe0654287fb358573aafc3",
+      "targetSha256": "0658d40b15a181c786def1b579d380a02196359ecbfe0654287fb358573aafc3"
+    },
+    {
+      "source": "supabase/functions/pilot-miniapp/index.ts",
+      "target": "supabase/functions/pilot-miniapp/index.ts",
+      "sourceSha256": "a2f5d07a8ea82a0081ee07ed29d87431eb3803ed91cd84c5f92b5774be6466b6",
+      "targetSha256": "a2f5d07a8ea82a0081ee07ed29d87431eb3803ed91cd84c5f92b5774be6466b6"
+    },
+    {
+      "source": "supabase/functions/pilot-miniapp/lib/auth.ts",
+      "target": "supabase/functions/pilot-miniapp/lib/auth.ts",
+      "sourceSha256": "63a7c99e4fcee40d6bb8a2eddb44ecc62e070d0c759e766d1e2441016177d1af",
+      "targetSha256": "63a7c99e4fcee40d6bb8a2eddb44ecc62e070d0c759e766d1e2441016177d1af"
+    },
+    {
+      "source": "supabase/functions/pilot-miniapp/lib/jstt.ts",
+      "target": "supabase/functions/pilot-miniapp/lib/jstt.ts",
+      "sourceSha256": "9e15f3217e9b6ddd6bb1e82548b58e422f6a4996a4f46f0ee880a42a00cf6273",
+      "targetSha256": "9e15f3217e9b6ddd6bb1e82548b58e422f6a4996a4f46f0ee880a42a00cf6273"
+    },
+    {
+      "source": "supabase/functions/pilot-miniapp/lib/runtime.ts",
+      "target": "supabase/functions/pilot-miniapp/lib/runtime.ts",
+      "sourceSha256": "6dbf91309e9bcfa29c075372d8c86c828e3dead8f21ed809ba78d9dab9a35b18",
+      "targetSha256": "570724ab447735fbe774e5f38033e606fae54285327f61520f10c5feccd3b58d"
+    },
+    {
+      "source": "supabase/functions/telegram-webhook/deno.json",
+      "target": "supabase/functions/telegram-webhook/deno.json",
+      "sourceSha256": "3b01a8f1057f86db396a323f7a1726d79959e8c6fccf8ec53dd3b8cb5d59feb7",
+      "targetSha256": "3b01a8f1057f86db396a323f7a1726d79959e8c6fccf8ec53dd3b8cb5d59feb7"
+    },
+    {
+      "source": "supabase/functions/telegram-webhook/deno.lock",
+      "target": "supabase/functions/telegram-webhook/deno.lock",
+      "sourceSha256": "eb53546a836e5489017e456b0844ed2f5c6878030517882daa8d0417a4d0e892",
+      "targetSha256": "eb53546a836e5489017e456b0844ed2f5c6878030517882daa8d0417a4d0e892"
+    },
+    {
+      "source": "supabase/functions/telegram-webhook/index.ts",
+      "target": "supabase/functions/telegram-webhook/index.ts",
+      "sourceSha256": "94d2889bb4adb9b59a27510037edf0f78032d106a8759fa969c739333d315d30",
+      "targetSha256": "94d2889bb4adb9b59a27510037edf0f78032d106a8759fa969c739333d315d30"
+    },
+    {
+      "source": "supabase/functions/telegram-webhook/lib/commands.ts",
+      "target": "supabase/functions/telegram-webhook/lib/commands.ts",
+      "sourceSha256": "fd7d1b8b2a35123e732a9661b31f55c362fe07a7f23674b524c27dbf38e22ea4",
+      "targetSha256": "f4b74771aaadce999fc8fb6c56b335a12b6e815456a8eb5612777656b1e180e1"
+    },
+    {
+      "source": "supabase/functions/telegram-webhook/lib/formatters.ts",
+      "target": "supabase/functions/telegram-webhook/lib/formatters.ts",
+      "sourceSha256": "1dce6a38021e141c7da5bd1001f910f395e97bbf2f5a944cd7e8e4477270e77d",
+      "targetSha256": "c96d43ab796168422720867635cbd938bcffb3752787f4215eecb1bae107f0a8"
+    },
+    {
+      "source": "supabase/functions/telegram-webhook/lib/registration.ts",
+      "target": "supabase/functions/telegram-webhook/lib/registration.ts",
+      "sourceSha256": "939a7c1151a8c9bcfeb12029ac0e9745bc8bebd7cb1e6540b931c027995ac373",
+      "targetSha256": "5324deb775022d8b3cfbf89a220ad46648ec3e518e6bef54feaf79cfad30b92f"
+    },
+    {
+      "source": "supabase/functions/telegram-webhook/lib/runtime.ts",
+      "target": "supabase/functions/telegram-webhook/lib/runtime.ts",
+      "sourceSha256": "cfcde525a8e542b87a0acf1c225dd7ba744e1098ab7b99d08b4b2617a5f177c7",
+      "targetSha256": "59d7562b3509b8d513e22e850f1e69313884d575f55c12a67fee89e20bc1504b"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-copy-source/deno.json",
+      "target": "supabase/functions/ulsan-pilot-copy-source/deno.json",
+      "sourceSha256": "0658d40b15a181c786def1b579d380a02196359ecbfe0654287fb358573aafc3",
+      "targetSha256": "0658d40b15a181c786def1b579d380a02196359ecbfe0654287fb358573aafc3"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-copy-source/index.ts",
+      "target": "supabase/functions/ulsan-pilot-copy-source/index.ts",
+      "sourceSha256": "ed3b8c375ab846df22bcba148d34c62c8800d53bce6a048873226e8ff301fe65",
+      "targetSha256": "ed3b8c375ab846df22bcba148d34c62c8800d53bce6a048873226e8ff301fe65"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-copy-source/lib/runtime.ts",
+      "target": "supabase/functions/ulsan-pilot-copy-source/lib/runtime.ts",
+      "sourceSha256": "43e019128b17ced230f0898bb5c29f3e77eefc6746524144672f0c7524df0a68",
+      "targetSha256": "a1839c9f7e0107cd30917c40302a7de56481dbf3316024ada54325c8035c3aaf"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-registration/deno.json",
+      "target": "supabase/functions/ulsan-pilot-registration/deno.json",
+      "sourceSha256": "0658d40b15a181c786def1b579d380a02196359ecbfe0654287fb358573aafc3",
+      "targetSha256": "0658d40b15a181c786def1b579d380a02196359ecbfe0654287fb358573aafc3"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-registration/index.ts",
+      "target": "supabase/functions/ulsan-pilot-registration/index.ts",
+      "sourceSha256": "a6870a3aea4c4ba7ad263dcab933c724637d2042e85adc9c463c2f0085810b71",
+      "targetSha256": "a6870a3aea4c4ba7ad263dcab933c724637d2042e85adc9c463c2f0085810b71"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-registration/lib/messages.ts",
+      "target": "supabase/functions/ulsan-pilot-registration/lib/messages.ts",
+      "sourceSha256": "f8c53faf6b51affefde44f37b0231963879b0c0aff95f982dae14217552e0f83",
+      "targetSha256": "8ee0cad2dbc28cca68b48fcf77c37ee0df12ebcd8cf631061f418f75debdedc1"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-registration/lib/runtime.ts",
+      "target": "supabase/functions/ulsan-pilot-registration/lib/runtime.ts",
+      "sourceSha256": "0ddfb3e2e2e1d3a1ebd2e277ba583329d0d7a55ba1fc63eab906d3573cfbb997",
+      "targetSha256": "015e20463af813eb19ffc9b74b2c2bf683a5765b4b90d9f2c01707afe5bba4cf"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/deno.json",
+      "target": "supabase/functions/ulsan-pilot-watcher/deno.json",
+      "sourceSha256": "3b01a8f1057f86db396a323f7a1726d79959e8c6fccf8ec53dd3b8cb5d59feb7",
+      "targetSha256": "3b01a8f1057f86db396a323f7a1726d79959e8c6fccf8ec53dd3b8cb5d59feb7"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/deno.lock",
+      "target": "supabase/functions/ulsan-pilot-watcher/deno.lock",
+      "sourceSha256": "eb53546a836e5489017e456b0844ed2f5c6878030517882daa8d0417a4d0e892",
+      "targetSha256": "eb53546a836e5489017e456b0844ed2f5c6878030517882daa8d0417a4d0e892"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/index.ts",
+      "target": "supabase/functions/ulsan-pilot-watcher/index.ts",
+      "sourceSha256": "23bf1c4ec998e1201500cc25e8c9bd7d5bc0f4c2ef176e75397b215a1180d136",
+      "targetSha256": "f75a266679d146ee5b7b8f730493cc8486336c444888fa07b50b8781bb185035"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/lib/dongjinCollector.ts",
+      "target": "supabase/functions/ulsan-pilot-watcher/lib/hyopuCollector.ts",
+      "sourceSha256": "c093a5782f161764f25b32ab83aa832e0a4661a29ff5f933e2ba7200b1f9e02e",
+      "targetSha256": "df4d87e150bdc515dbf9527f2e68b9d2ddc731e9cc11d20524c7993accd4ddf2"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/lib/dongjinQueue.ts",
+      "target": "supabase/functions/ulsan-pilot-watcher/lib/hyopuQueue.ts",
+      "sourceSha256": "0eb7c5432a7f5012a7f1fbc9b67d806a1edf35f5a4963a1ecb8f9a27a7ca38ae",
+      "targetSha256": "9b992423d06c39607e84bd425143db536cd3b795ad2870275c6a19142cf1085f"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/lib/dongjinRuntime.ts",
+      "target": "supabase/functions/ulsan-pilot-watcher/lib/hyopuRuntime.ts",
+      "sourceSha256": "e55951e1a19d21add26aaa2de5bc1f1386ffb5e74f85af2e62c8341bb13dd568",
+      "targetSha256": "88c24a7e56c4bdffe6eb68d76c6d6e2c3578fce0a2bfe4620b9290f4c9ccbc1e"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/lib/dongjinSource.ts",
+      "target": "supabase/functions/ulsan-pilot-watcher/lib/hyopuSource.ts",
+      "sourceSha256": "a0683c0ae0326dfb9b2ef2e699910a4a4c6f3f31f39d73f6baa983302c60a5f7",
+      "targetSha256": "ce060ac4733930a7a0ffed3e8193c1cdc0616823ed7d2721b86d55b053982660"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/lib/runtime.ts",
+      "target": "supabase/functions/ulsan-pilot-watcher/lib/runtime.ts",
+      "sourceSha256": "9dcbb094e304a492346fa709a06733bf8b78c0e3fa9acac72d69eeb37a57d0ec",
+      "targetSha256": "9dcbb094e304a492346fa709a06733bf8b78c0e3fa9acac72d69eeb37a57d0ec"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/lib/source.ts",
+      "target": "supabase/functions/ulsan-pilot-watcher/lib/source.ts",
+      "sourceSha256": "9fa579d9a70e02892bd6d02ac8cf8558192484b1f974daf00e41acf405d97275",
+      "targetSha256": "9fa579d9a70e02892bd6d02ac8cf8558192484b1f974daf00e41acf405d97275"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/lib/telegramSetup.ts",
+      "target": "supabase/functions/ulsan-pilot-watcher/lib/telegramSetup.ts",
+      "sourceSha256": "a839d015a3bb908a917670a4340bbca314a9c535c7280d7c98285aebfce1a57d",
+      "targetSha256": "0c14e1756db93a5a6d5a62386dece528880ad2c29a80723408d7a9d5bafdc8b9"
+    },
+    {
+      "source": "supabase/functions/_shared/jstt.ts",
+      "target": "supabase/functions/_shared/jstt.ts",
+      "sourceSha256": "7d32968a4649b38a397cb507f80b2431046b5e62db473c1feac42218f9be5831",
+      "targetSha256": "8f076d8aace6aed6e1a16197d2d0cf3037ce29cecac1887071edc55788e7b776"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-registration/client.ts",
+      "target": "supabase/functions/_shared/pilot-registration/client.ts",
+      "sourceSha256": "d1e80f994e06c82b93cd64fd2062e7798834b66b554910273abdc6b6c37503cb",
+      "targetSha256": "d25ac5fef25ab17d31de5608d2076b063a6cd964371c0ded1c8e8c1faf911149"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-registration/contract.ts",
+      "target": "supabase/functions/_shared/pilot-registration/contract.ts",
+      "sourceSha256": "2922f959ba248056e0905790c08041fc7fdb76682224869d17db3c36f11eb2f4",
+      "targetSha256": "7efd63ab65ce2f2780d307b4d9a5e9e58196d65fc2372fa090056765200a2019"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-registration/copy.ts",
+      "target": "supabase/functions/_shared/pilot-registration/copy.ts",
+      "sourceSha256": "5134db545b21bd56d83be8acb39cc924e378fd2d4d73180e571f2d5cdbf54d5f",
+      "targetSha256": "1d8b0cc1b4a96bcc596226856e19e65975f67d139e988f817bd722252fdd7170"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-registration/crypto.ts",
+      "target": "supabase/functions/_shared/pilot-registration/crypto.ts",
+      "sourceSha256": "dde1a4f131d4e1b8682599255ac6726476472cfbbc0eab71a0fc214d1c86c2ad",
+      "targetSha256": "dde1a4f131d4e1b8682599255ac6726476472cfbbc0eab71a0fc214d1c86c2ad"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-registration/eligibility.ts",
+      "target": "supabase/functions/_shared/pilot-registration/eligibility.ts",
+      "sourceSha256": "f383c08cea93fedd6a256843b973fd7ae9b71f35f1f16ae48f3c0f9ca8210a42",
+      "targetSha256": "cd4a000cb6b8284a162907320740d4d31178caead11c65eb43d0c42634d58844"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-registration/wizard.ts",
+      "target": "supabase/functions/_shared/pilot-registration/wizard.ts",
+      "sourceSha256": "b6892cd7addfe6d2d4ca7319429172b6bed21710248671db9d509e3e75cbcf3a",
+      "targetSha256": "30f076068ef2806e5fb5bf7d3fd93ddfb2194c1abeb8337d28163c5063bdca8f"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-route/catalog.ts",
+      "target": "supabase/functions/_shared/pilot-route/catalog.ts",
+      "sourceSha256": "c1e94828c7bce7785b9bb67565615764d8e484d354b6dd41b7fd6eda7e8413a9",
+      "targetSha256": "c1e94828c7bce7785b9bb67565615764d8e484d354b6dd41b7fd6eda7e8413a9"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-route/draft.ts",
+      "target": "supabase/functions/_shared/pilot-route/draft.ts",
+      "sourceSha256": "6cb6ae3e5c384278447e3322fd8a84d9c8507b35e9cb69d5f97ce8f40374d841",
+      "targetSha256": "6cb6ae3e5c384278447e3322fd8a84d9c8507b35e9cb69d5f97ce8f40374d841"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-route/resolver.ts",
+      "target": "supabase/functions/_shared/pilot-route/resolver.ts",
+      "sourceSha256": "6f12e3bddc3edabf48b03c4c225fd839105e47a8bc52635aae634cedb30709cc",
+      "targetSha256": "6f12e3bddc3edabf48b03c4c225fd839105e47a8bc52635aae634cedb30709cc"
+    },
+    {
+      "source": "supabase/functions/_shared/pilot-route/telegram.ts",
+      "target": "supabase/functions/_shared/pilot-route/telegram.ts",
+      "sourceSha256": "8018960fb35cdb6b85dba9e023efbec391d2e76ca1bd45ae4a93ff7e950305cd",
+      "targetSha256": "8018960fb35cdb6b85dba9e023efbec391d2e76ca1bd45ae4a93ff7e950305cd"
+    },
+    {
+      "source": "supabase/functions/_shared/pilotDateTime.ts",
+      "target": "supabase/functions/_shared/pilotDateTime.ts",
+      "sourceSha256": "1fcc1064f623a9640b81820712bc6be905c722c35e8957fd18eca9702071cbc8",
+      "targetSha256": "1fcc1064f623a9640b81820712bc6be905c722c35e8957fd18eca9702071cbc8"
+    },
+    {
+      "source": "supabase/functions/_shared/pilotRoomAccess.ts",
+      "target": "supabase/functions/_shared/pilotRoomAccess.ts",
+      "sourceSha256": "9dea9a630f3a756da64639f517b63c252e0621abd5914249b91aa60d875a5130",
+      "targetSha256": "9dea9a630f3a756da64639f517b63c252e0621abd5914249b91aa60d875a5130"
+    },
+    {
+      "source": "supabase/config.toml",
+      "target": "supabase/config.toml",
+      "sourceSha256": "56960d3c2ef90108dd45c2b3e7684088f0683ce1cc9386e1d0ea5289637dd630",
+      "targetSha256": "56960d3c2ef90108dd45c2b3e7684088f0683ce1cc9386e1d0ea5289637dd630"
+    },
+    {
+      "source": "supabase/migrations/20260920000000_ulsan_pilot_watcher.sql",
+      "target": "supabase/migrations/20260920000000_ulsan_pilot_watcher.sql",
+      "sourceSha256": "9d1b4959c6412fd5b02af0984bce2d1dc4a280f230496929ed8c68e83b9dfb39",
+      "targetSha256": "34a40e231e26a76c5539e1e781cf7afd60f149a6ac6a82722ccbef86a7c35851"
+    },
+    {
+      "source": "supabase/migrations/20260920000100_ulsan_pilot_cron.sql",
+      "target": "supabase/migrations/20260920000100_ulsan_pilot_cron.sql",
+      "sourceSha256": "2d44a3c44cd77496dacb2865da7dd71157d43502b10677f9ce6382424f52a8f5",
+      "targetSha256": "2d44a3c44cd77496dacb2865da7dd71157d43502b10677f9ce6382424f52a8f5"
+    },
+    {
+      "source": "supabase/migrations/20260920000200_ulsan_pilot_delivery_test.sql",
+      "target": "supabase/migrations/20260920000200_ulsan_pilot_delivery_test.sql",
+      "sourceSha256": "10a8e93bc36ac3fa1a469f203e1cb5f590ddf221da93816d81b997e1f56d8bff",
+      "targetSha256": "10a8e93bc36ac3fa1a469f203e1cb5f590ddf221da93816d81b997e1f56d8bff"
+    },
+    {
+      "source": "supabase/migrations/20260920000300_dongjin_operations.sql",
+      "target": "supabase/migrations/20260920000300_hyopu_operations.sql",
+      "sourceSha256": "2a6d9b1c15f523abe326a0c53e6aa9e896aa52c0ae4f1f0f1c438f3471bf0e81",
+      "targetSha256": "e53203fe4cc6fcc8da36deab4c686d4655760e40a7679d72a4f0474f684f1416"
+    },
+    {
+      "source": "supabase/migrations/20260920000400_dongjin_telegram.sql",
+      "target": "supabase/migrations/20260920000400_hyopu_telegram.sql",
+      "sourceSha256": "f72ffc17bd678143c4e539ade0b4839d35a551621ff4b4d3bb076931ef3f734a",
+      "targetSha256": "e5fec9794fa766c040bea0e868b6db2aabee9670fb18ba4c3ff9c0c27e1900f2"
+    },
+    {
+      "source": "supabase/migrations/20260920000500_dongjin_query_context.sql",
+      "target": "supabase/migrations/20260920000500_hyopu_query_context.sql",
+      "sourceSha256": "8bd1e3659b2db2968c5a770bb831ae4ed5e679805cf4ccfc1bd3bc2bfb207e46",
+      "targetSha256": "a975c91b5909b80e71f5ddf5ff2b48ac9821ac280026b4dc73555aafc20c2ac8"
+    },
+    {
+      "source": "supabase/migrations/20260920000600_dongjin_mooring.sql",
+      "target": "supabase/migrations/20260920000600_hyopu_mooring.sql",
+      "sourceSha256": "48668bc72d22e84d5167705d72de34cc9af2a657a125c22f99f4b48383e77b2c",
+      "targetSha256": "cdc27a7a04cbade59560a09f1b4c8759c66a1c5cffb20f5d5615f5ab1bd812f2"
+    },
+    {
+      "source": "supabase/migrations/20260920000700_pilot_registration.sql",
+      "target": "supabase/migrations/20260920000700_pilot_registration.sql",
+      "sourceSha256": "742fdbec054fed7adf2fea125e22e115c13c7ceb6c270f8a48f9b8cab4c382fe",
+      "targetSha256": "5ef40a94691dc634eec2c2dbff78cf55d5790f2c321e57158fd08b4abeafaf5d"
+    },
+    {
+      "source": "supabase/migrations/20260920000800_pilot_registration_dispatch.sql",
+      "target": "supabase/migrations/20260920000800_pilot_registration_dispatch.sql",
+      "sourceSha256": "4ec899d9fa03aa6d62111a13e246570ee9667b8191cdff67946abc02e519b73e",
+      "targetSha256": "4ec899d9fa03aa6d62111a13e246570ee9667b8191cdff67946abc02e519b73e"
+    },
+    {
+      "source": "supabase/migrations/20260920000900_pilot_miniapp.sql",
+      "target": "supabase/migrations/20260920000900_pilot_miniapp.sql",
+      "sourceSha256": "5351e4caea4818a3da7a889cb5da204620779f208900c357944a4cefcd1515d6",
+      "targetSha256": "5351e4caea4818a3da7a889cb5da204620779f208900c357944a4cefcd1515d6"
+    },
+    {
+      "source": "supabase/migrations/20260920001000_pilot_registration_status.sql",
+      "target": "supabase/migrations/20260920001000_pilot_registration_status.sql",
+      "sourceSha256": "4a631426e525dd546bd49edce38cd16c7b75870712f365c5dc505e5a136fc5d7",
+      "targetSha256": "c58c84162ed68082d6cb8b46380f783ad835d1d479ee1c4ef90e30721ce158da"
+    },
+    {
+      "source": "supabase/migrations/20260920001100_pilot_copy_registration.sql",
+      "target": "supabase/migrations/20260920001100_pilot_copy_registration.sql",
+      "sourceSha256": "e8a4bb5ad4f4db65ed33f4d3bf7933200d907888a2bd77b30e84762ed77d65ac",
+      "targetSha256": "d2a1d2fed7c92acb3aafdd223bdca5298167be673671c8ba2894c2f8f28ff4e1"
+    },
+    {
+      "source": "supabase/migrations/20260920001200_pilot_budget_settlement.sql",
+      "target": "supabase/migrations/20260920001200_pilot_budget_settlement.sql",
+      "sourceSha256": "a3dcc27cbe15a944530e27c90ba7bca22c4b5287b1e6157998f9ff7112632ff0",
+      "targetSha256": "50edb6e7c5642039a48f6f393265813453d83844dc07a29c429be3e6ca0f165d"
+    },
+    {
+      "source": "supabase/migrations/20260920001300_pilot_pob_date_labels.sql",
+      "target": "supabase/migrations/20260920001300_pilot_pob_date_labels.sql",
+      "sourceSha256": "53cda22bb66b25ec406198e625e10cda24d418bba0caa957e8b2ee80524d6614",
+      "targetSha256": "d39a5e19315f25a2d8070fa8b8aff97878cecd1c60cf6cdf0fa1cf014cf659f6"
+    },
+    {
+      "source": "supabase/migrations/20260920001400_pilot_mini_active_draft.sql",
+      "target": "supabase/migrations/20260920001400_pilot_mini_active_draft.sql",
+      "sourceSha256": "97f409f636957a71c22fdf99f737a1a136698d35b76b9a2071c1314326b5a7ee",
+      "targetSha256": "97f409f636957a71c22fdf99f737a1a136698d35b76b9a2071c1314326b5a7ee"
+    },
+    {
+      "source": "supabase/migrations/20260921001500_pilot_pob_identity.sql",
+      "target": "supabase/migrations/20260921001500_pilot_pob_identity.sql",
+      "sourceSha256": "82d5c5b4f426703936d3298da548c8e9116b902bd0a56dcee7ee343c99f9087b",
+      "targetSha256": "6d3846b044d5fa2daef46358e6e2297344d6e058411a42fe1940e73af0aac29d"
+    },
+    {
+      "source": "supabase/migrations/20260921001600_pilot_concise_notifications.sql",
+      "target": "supabase/migrations/20260921001600_pilot_concise_notifications.sql",
+      "sourceSha256": "7d6eeff16ebd35cc803cb08e2fadc8b490eda984ce476d38123d1400a7da2724",
+      "targetSha256": "a863101ade083d2a739ea1a7cc7aba0b78bf4e1f2c285bf173162516e6bebb70"
+    },
+    {
+      "source": "supabase/migrations/20260921001700_jstt_berth_monitor.sql",
+      "target": "supabase/migrations/20260921001700_jstt_berth_monitor.sql",
+      "sourceSha256": "5e39fce57c18c66c845c450a7a89c75c05aeb245a200f3f98d0bbd327c5880e4",
+      "targetSha256": "6ba5c175ee13eb7f1eb0415f5fda7a8c06dfb51e7a660b1c7756fdab2c483f31"
+    },
+    {
+      "source": "supabase/migrations/20260921001800_jstt_run_measurement.sql",
+      "target": "supabase/migrations/20260921001800_jstt_run_measurement.sql",
+      "sourceSha256": "81b8dfb4173c757c86dc008b07615021194f9d9c10770c17e98413561039233c",
+      "targetSha256": "81b8dfb4173c757c86dc008b07615021194f9d9c10770c17e98413561039233c"
+    },
+    {
+      "source": "supabase/migrations/20260921001900_jstt_twenty_minute_schedule.sql",
+      "target": "supabase/migrations/20260921001900_jstt_twenty_minute_schedule.sql",
+      "sourceSha256": "fd3a05daeaab2e676a521539a8d32f3762bfd2db650e6edf20bac7b3e844d786",
+      "targetSha256": "fd3a05daeaab2e676a521539a8d32f3762bfd2db650e6edf20bac7b3e844d786"
+    },
+    {
+      "source": "supabase/migrations/20260921002000_jstt_observed_requested_status.sql",
+      "target": "supabase/migrations/20260921002000_jstt_observed_requested_status.sql",
+      "sourceSha256": "26023e72c7db7902de99d792772ddfd09efab89296d3471acb079ab0883e0d97",
+      "targetSha256": "26023e72c7db7902de99d792772ddfd09efab89296d3471acb079ab0883e0d97"
+    },
+    {
+      "source": "supabase/migrations/20260921002100_jstt_partial_range_guard.sql",
+      "target": "supabase/migrations/20260921002100_jstt_partial_range_guard.sql",
+      "sourceSha256": "907a1d6af54048fe3791214407c2771391549f98257c29e7b50903ae9a0ddcc2",
+      "targetSha256": "907a1d6af54048fe3791214407c2771391549f98257c29e7b50903ae9a0ddcc2"
+    },
+    {
+      "source": "supabase/migrations/20260921002200_jstt_observed_modified_request.sql",
+      "target": "supabase/migrations/20260921002200_jstt_observed_modified_request.sql",
+      "sourceSha256": "bc77042e2dd1b6e8b8249fff6d362c8461867598e8982bf07355e0bd6f8e00c0",
+      "targetSha256": "bc77042e2dd1b6e8b8249fff6d362c8461867598e8982bf07355e0bd6f8e00c0"
+    },
+    {
+      "source": "supabase/migrations/20260921002300_pilot_optional_cost_limits.sql",
+      "target": "supabase/migrations/20260921002300_pilot_optional_cost_limits.sql",
+      "sourceSha256": "036ce491b885422c9275c4cb3799bc606bf442cfed8754b0b47baa8f6e77ed71",
+      "targetSha256": "036ce491b885422c9275c4cb3799bc606bf442cfed8754b0b47baa8f6e77ed71"
+    },
+    {
+      "source": "supabase/migrations/20260922002400_pilot_notification_policy.sql",
+      "target": "supabase/migrations/20260922002400_pilot_notification_policy.sql",
+      "sourceSha256": "13c3331854655585344cdcfe0d161631f5d7f2bb9eb98953253dec2841f836fd",
+      "targetSha256": "8557b986146d6bd3ea6ec016d0f1688b64f808bcc5796aae5f1413b9387d8e52"
+    },
+    {
+      "source": "supabase/migrations/20260922002500_pilot_event_titles.sql",
+      "target": "supabase/migrations/20260922002500_pilot_event_titles.sql",
+      "sourceSha256": "37304e76a5e3b7810b203569cd4543656e74a6103ccfff2b8e45d34833138050",
+      "targetSha256": "b85990cded663d7345337dc23df7d11269b65c7507b4b25a705ff88abbf7e674"
+    },
+    {
+      "source": "tests/jsttBerthCore.test.ts",
+      "target": "tests/jsttBerthCore.test.ts",
+      "sourceSha256": "f3efe188209531d61b5de7af0fbf5ed0956a672d4fbc2bf5a4f2bf3d7dfb962a",
+      "targetSha256": "d349d86aba0d3bdf13698ec892fdd61d026b3c613d5b72aa1fd018b5d7eed2e8"
+    },
+    {
+      "source": "tests/jsttBerthDatabase.test.ts",
+      "target": "tests/jsttBerthDatabase.test.ts",
+      "sourceSha256": "0cc12a0a131a5bde39fafb4b5018a104ee39cedb8f7ce05e7b872ede0e2d377e",
+      "targetSha256": "e52f7773533db792fbc8ac61d63f709e13d099a0f0bbb87289be80fe6aec7a7e"
+    },
+    {
+      "source": "tests/jsttBerthDates.test.ts",
+      "target": "tests/jsttBerthDates.test.ts",
+      "sourceSha256": "0cbc791c36fd46bc89e08048e07913d9d33c702e2c4ea318d9a3a5ff12f94e4e",
+      "targetSha256": "0cbc791c36fd46bc89e08048e07913d9d33c702e2c4ea318d9a3a5ff12f94e4e"
+    },
+    {
+      "source": "tests/jsttBerthQuery.test.ts",
+      "target": "tests/jsttBerthQuery.test.ts",
+      "sourceSha256": "46981741f87dbe854aa033c6b3edb4c10e5513c71ca0d08847d5e58b530ffcf0",
+      "targetSha256": "46981741f87dbe854aa033c6b3edb4c10e5513c71ca0d08847d5e58b530ffcf0"
+    },
+    {
+      "source": "tests/jsttBerthRuntime.test.ts",
+      "target": "tests/jsttBerthRuntime.test.ts",
+      "sourceSha256": "34adbf6c952ac4e7402043d6306758829f008144247b5c3a4008f36fb7341333",
+      "targetSha256": "34adbf6c952ac4e7402043d6306758829f008144247b5c3a4008f36fb7341333"
+    },
+    {
+      "source": "tests/jsttBerthUi.test.ts",
+      "target": "tests/jsttBerthUi.test.ts",
+      "sourceSha256": "8a473742fa0bcb5e382cc95028b9e2ba36758aebc1f80459853a833c6a29611d",
+      "targetSha256": "1e804b02bd0e268e4d6706762dc23378ed0f8c64856b11f61a3669ffd07ab3d7"
+    },
+    {
+      "source": "tests/pilotRoomAccess.test.ts",
+      "target": "tests/pilotRoomAccess.test.ts",
+      "sourceSha256": "1ed82e20255332b0a570b6fd44d3518c2ccc4a3f1c99ff46a833b95142065285",
+      "targetSha256": "1ed82e20255332b0a570b6fd44d3518c2ccc4a3f1c99ff46a833b95142065285"
+    },
+    {
+      "source": "tests/ulsanDongjinDatabase.test.ts",
+      "target": "tests/ulsanHyopuDatabase.test.ts",
+      "sourceSha256": "c70c98cfce0ecf7ca2aa39ceeae52ab5aadb20e7d38e7c685a42f4419a9249e9",
+      "targetSha256": "9f081b7ca1bba0d624b85a5b22f154dc22b13fc8e2811ad065eef3152079cbdb"
+    },
+    {
+      "source": "tests/ulsanDongjinQueue.test.ts",
+      "target": "tests/ulsanHyopuQueue.test.ts",
+      "sourceSha256": "b04973e573d7b2d6a2b02bf9a978af162848e32b537553fc4014eb0d4f9a15c6",
+      "targetSha256": "7ecc6e5f19864c0cff4203d1b81f0db3090c71e5084532cb525e4576ca8a8626"
+    },
+    {
+      "source": "tests/ulsanDongjinRuntime.test.ts",
+      "target": "tests/ulsanHyopuRuntime.test.ts",
+      "sourceSha256": "369f74b2cacd3d624aebe67c8df7b84b3eb8da30555a377a80ca98defaa59839",
+      "targetSha256": "7b84efd71b14902f02956539774fcd8323922d281d79428a70b54f0e6be19ece"
+    },
+    {
+      "source": "tests/ulsanDongjinSource.test.ts",
+      "target": "tests/ulsanHyopuSource.test.ts",
+      "sourceSha256": "fca28172ff020be4c5ff23adb3a7d03b95b4e964f863fd759285978fb8b639a0",
+      "targetSha256": "cef2be81cddb7b40386b16e4195aaa13dd93d591f75dfa95407d0c3dadb9383c"
+    },
+    {
+      "source": "tests/ulsanNotificationCutover.test.ts",
+      "target": "tests/ulsanNotificationCutover.test.ts",
+      "sourceSha256": "d7a3573a7bb7ffae5985bc40bcdfa74921817f7bbc008c0f3ac3885407c3bbfa",
+      "targetSha256": "ffb3285e8047c9de8b6d94459ff50217048cf05d40a92a46de8b75de2edf85a1"
+    },
+    {
+      "source": "tests/ulsanPilotBudget.test.ts",
+      "target": "tests/ulsanPilotBudget.test.ts",
+      "sourceSha256": "eb2da91e41f6e42a9244bd4f607510f24f0233087c96c8d50d9e7f41fd463182",
+      "targetSha256": "878ef7e0a241d48b090082211795bab3eab0344d6cc6c7d329f6eb6a0274457f"
+    },
+    {
+      "source": "tests/ulsanPilotCopy.test.ts",
+      "target": "tests/ulsanPilotCopy.test.ts",
+      "sourceSha256": "cc1495a0ca73e45a4bffe8e023a92679c02ec4d7096c88cc69cdf62e72c12c5b",
+      "targetSha256": "835a90a499250703871159e0bfb8f0446ddf995e8035a429799bec6bc91d7880"
+    },
+    {
+      "source": "tests/ulsanPilotCopyDatabase.test.ts",
+      "target": "tests/ulsanPilotCopyDatabase.test.ts",
+      "sourceSha256": "5dac94ad0c042f8ce23e20ac487b173bdd23d586b620d59de292c732150e459b",
+      "targetSha256": "14417017c1ed822ca9f2be7d6778baece7c29835b9ebe94fc71db45c79b51f07"
+    },
+    {
+      "source": "tests/ulsanPilotDatabase.test.ts",
+      "target": "tests/ulsanPilotDatabase.test.ts",
+      "sourceSha256": "cbb78534102bda2d6ffa5a542c2550230f9c87649785a86913d098b179fe8a36",
+      "targetSha256": "d430d076362d69a7be651b77c1a2c2c6762b5128780047e17acca58501170c9b"
+    },
+    {
+      "source": "tests/ulsanPilotEligibilityWorker.test.ts",
+      "target": "tests/ulsanPilotEligibilityWorker.test.ts",
+      "sourceSha256": "76e9fed87166a11a7aad4c3a9e86aa313e474fd7e200194f6b3e2bd96e60c6f8",
+      "targetSha256": "9b4ca5427b77bebd3130e8a715875e06cd84cbee2a4ad83a2dac294a7bb22da5"
+    },
+    {
+      "source": "tests/ulsanPilotMiniApp.test.ts",
+      "target": "tests/ulsanPilotMiniApp.test.ts",
+      "sourceSha256": "a8ede9276f6e03f8b9012c7cb4e971f01d933bb0399679bd752b9602b9d39f7c",
+      "targetSha256": "914a1bb0b2e2e8107d3f4a1d344ab0742f7b5da321173d2b22a127e969b81214"
+    },
+    {
+      "source": "tests/ulsanPilotMiniAppDatabase.test.ts",
+      "target": "tests/ulsanPilotMiniAppDatabase.test.ts",
+      "sourceSha256": "1d93c042db88a7d46a19937396582c2683f49e10a61ca23905f829740072880a",
+      "targetSha256": "d26e1d2f4727fe7d169e4219769155c95b73854d8e7a6a6dae57960bb7ef8db7"
+    },
+    {
+      "source": "tests/ulsanPilotMiniAppUi.test.ts",
+      "target": "tests/ulsanPilotMiniAppUi.test.ts",
+      "sourceSha256": "be53d337df9c70451e5b340a15a80c7e0f8ee9e42f3127fb27863aff26236a3c",
+      "targetSha256": "be53d337df9c70451e5b340a15a80c7e0f8ee9e42f3127fb27863aff26236a3c"
+    },
+    {
+      "source": "tests/ulsanPilotNotificationMessages.test.ts",
+      "target": "tests/ulsanPilotNotificationMessages.test.ts",
+      "sourceSha256": "cf2f06caadee25ffca3ed6f0c51ad7a4a9c218469cbb093d4e08d09ecf748fc5",
+      "targetSha256": "943b1c28a22b2a7f8561507c755fc55d5b42d834f283864b47c38b9e7977fd6c"
+    },
+    {
+      "source": "tests/ulsanPilotOptionalCostLimits.test.ts",
+      "target": "tests/ulsanPilotOptionalCostLimits.test.ts",
+      "sourceSha256": "5ac8001216ebb20d62fe9dd675500b8755c3571afa4b76b9b6a5d7221ba08e67",
+      "targetSha256": "4a0f09ac739a24e57421a5ade7f64493d357a2daab380d8c46d14a26de5f4786"
+    },
+    {
+      "source": "tests/ulsanPilotRegistration.test.ts",
+      "target": "tests/ulsanPilotRegistration.test.ts",
+      "sourceSha256": "c63ff839ae32b2ac60518fbce76564e2063ce620488c5638a2099ea297dbb601",
+      "targetSha256": "edf55eae3b2f3971bf1cc913e9d3e393e6aa163c2339f045119f22d0685d5067"
+    },
+    {
+      "source": "tests/ulsanPilotRegistrationDatabase.test.ts",
+      "target": "tests/ulsanPilotRegistrationDatabase.test.ts",
+      "sourceSha256": "f90d48b9300f9db062cd8a76d68229449596ff9fbd543e7edc5316ca4a3a771c",
+      "targetSha256": "46b50cf4866f15e30bc93421eca85bfa657806ebf6e9e57b3f4a665156bcf316"
+    },
+    {
+      "source": "tests/ulsanPilotRoute.test.ts",
+      "target": "tests/ulsanPilotRoute.test.ts",
+      "sourceSha256": "9287e7236260800e3cd0f84cf91ea231c77fb81460275c3e203e846756fc6566",
+      "targetSha256": "adb99b8a381434013d65842050ffba47612f1e916b7cabd8c871ced87b0fbf33"
+    },
+    {
+      "source": "tests/ulsanPilotRuntime.test.ts",
+      "target": "tests/ulsanPilotRuntime.test.ts",
+      "sourceSha256": "2a4d2409083de63b87875151ff5f5bd657138ce678df3cdc75b694df7d679b8c",
+      "targetSha256": "aa611c62dc69b1a163d4bd9bb4c88fa62738925a585e2e02972dd85fdf0b5b46"
+    },
+    {
+      "source": "tests/ulsanPilotSource.test.ts",
+      "target": "tests/ulsanPilotSource.test.ts",
+      "sourceSha256": "a0218cc4f27c6bb18164c3d0a963978d44fcf5c5d4ace3cd0bb3ba0255386c38",
+      "targetSha256": "1afc54691be3521154f2cd3f367a55607ef82fa81d9a1677b4939ce62e36d170"
+    },
+    {
+      "source": "tests/ulsanTelegramWebhook.test.ts",
+      "target": "tests/ulsanTelegramWebhook.test.ts",
+      "sourceSha256": "7562e2f2285a7592a24ec2abfa934e577c8f887864f4330478a0b654de5fce3b",
+      "targetSha256": "804347d3f4791bee566a04aba66c75cf1a1ef2b198bb07ce39072bdef03b9502"
+    },
+    {
+      "source": "pilot-miniapp/app.js",
+      "target": "pilot-miniapp/app.js",
+      "sourceSha256": "ed805f536205b8763dc40c95a1da98d338fc4d2dfbb072f293f111ea9766467d",
+      "targetSha256": "961659de5ed505fa928779afae96bd1b9565b28c57455cde0d2ef7b4946cb492"
+    },
+    {
+      "source": "pilot-miniapp/boot.js",
+      "target": "pilot-miniapp/boot.js",
+      "sourceSha256": "a3241712ccc7a57821ef0bcd124056ed6702e41c1a94f5938d5d87ea39fe506d",
+      "targetSha256": "87939bcaf1dc71f14487d71a45957c2f0f95c6264a634cf40ad5e3c504346537"
+    },
+    {
+      "source": "pilot-miniapp/index.html",
+      "target": "pilot-miniapp/index.html",
+      "sourceSha256": "128954ff63b734c1920fe9b159192a9e9ff744c6fbc9710ae9b9a3712c760268",
+      "targetSha256": "e760ad2dcf177c19bd7ed6da1a63d0321548e00ad69d5271e633f8a96cd81dd6"
+    },
+    {
+      "source": "pilot-miniapp/jstt.js",
+      "target": "pilot-miniapp/jstt.js",
+      "sourceSha256": "b7c7a01f9d4bf576a67dea2dd79e9b5878118adf6a7f7fbd593c4e46624fff3f",
+      "targetSha256": "52e2e579de6b708a32be3b4b483ab6ef86d2fc73ce05001b80136721417eb59f"
+    },
+    {
+      "source": "pilot-miniapp/phone.js",
+      "target": "pilot-miniapp/phone.js",
+      "sourceSha256": "5115368df3c98d32f0f24832ce00e66c7697baf62a85f075482fe0bdc1c29795",
+      "targetSha256": "5115368df3c98d32f0f24832ce00e66c7697baf62a85f075482fe0bdc1c29795"
+    },
+    {
+      "source": "pilot-miniapp/time.js",
+      "target": "pilot-miniapp/time.js",
+      "sourceSha256": "e42e95080ef0819febb724de14f282c68b0979ec99c6025404245c24392584af",
+      "targetSha256": "e42e95080ef0819febb724de14f282c68b0979ec99c6025404245c24392584af"
+    },
+    {
+      "source": "pilot-miniapp/style.css",
+      "target": "pilot-miniapp/style.css",
+      "sourceSha256": "92bda2b42a36f83059aa0d0e5f82d4bb74af7ce0b496c1c1c30ba2e11cc2d6f9",
+      "targetSha256": "92bda2b42a36f83059aa0d0e5f82d4bb74af7ce0b496c1c1c30ba2e11cc2d6f9"
+    },
+    {
+      "source": "api/_jstt_berth_browser.mjs",
+      "target": "api/_jstt_berth_browser.mjs",
+      "sourceSha256": "35c7c777dd23449ae891ec0696109a018593dfe747af8d039bcc339c647f270d",
+      "targetSha256": "35c7c777dd23449ae891ec0696109a018593dfe747af8d039bcc339c647f270d"
+    },
+    {
+      "source": "api/_jstt_berth_core.mjs",
+      "target": "api/_jstt_berth_core.mjs",
+      "sourceSha256": "d977f647cf6a4326d58b7d3b71e5cccf44b0985b706be3addc1c370da2918049",
+      "targetSha256": "d977f647cf6a4326d58b7d3b71e5cccf44b0985b706be3addc1c370da2918049"
+    },
+    {
+      "source": "api/_jstt_berth_dates.mjs",
+      "target": "api/_jstt_berth_dates.mjs",
+      "sourceSha256": "cb9e4fe0cb520ee326fa414651250cd9f97ede006cbbd7537e64851f40bcafe4",
+      "targetSha256": "cb9e4fe0cb520ee326fa414651250cd9f97ede006cbbd7537e64851f40bcafe4"
+    },
+    {
+      "source": "api/_jstt_berth_query.mjs",
+      "target": "api/_jstt_berth_query.mjs",
+      "sourceSha256": "552aa43c4f321847ce122016edcfbe67b3e964b7c117d107cf941fff5c5f64b0",
+      "targetSha256": "552aa43c4f321847ce122016edcfbe67b3e964b7c117d107cf941fff5c5f64b0"
+    },
+    {
+      "source": "api/_jstt_schedule_core.mjs",
+      "target": "api/_jstt_schedule_core.mjs",
+      "sourceSha256": "2c9bbcd141205021c99752c2cea9ead75dae942e84065d9381ed86fd023a3e90",
+      "targetSha256": "2c9bbcd141205021c99752c2cea9ead75dae942e84065d9381ed86fd023a3e90"
+    },
+    {
+      "source": "api/jstt_berth_watch.mjs",
+      "target": "api/jstt_berth_watch.mjs",
+      "sourceSha256": "3a27e38b0febf65f9468765b4aa8d2c5879aba66c23af86cfe95e0cf3701d063",
+      "targetSha256": "50993a4595c916d6664ae804f200a85a46f1894bb994e0c48e23629e1f763d16"
+    }
+  ]
+}

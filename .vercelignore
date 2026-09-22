@@ -1,0 +1,7 @@
+pilot-bot/node_modules
+pilot-bot/reports
+pilot-bot/tests
+pilot-bot/scripts
+pilot-bot/supabase
+docs
+.env*

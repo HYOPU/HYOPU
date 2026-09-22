@@ -1,0 +1,50 @@
+name: HYOPU pilot bot verification
+
+on:
+  pull_request:
+    paths:
+      - 'pilot-bot/**'
+      - 'api/hpbot-jstt.js'
+      - 'scripts/build.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vercel.json'
+      - '.github/workflows/pilot-bot-verify.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'pilot-bot/**'
+      - 'api/hpbot-jstt.js'
+      - 'scripts/build.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vercel.json'
+      - '.github/workflows/pilot-bot-verify.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pilot-bot-verification-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pilot-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: pilot-bot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: pilot-bot/package-lock.json
+      - run: npm ci
+      # Local fixtures/PGlite only. No production secrets, source login or deploy.
+      # Bound WASM database workers to avoid exhausting the hosted runner memory.
+      - run: npm test -- --maxWorkers=2
+      - run: npm run build

@@ -1,0 +1,91 @@
+{
+  "captured_at": "2026-09-22T03:00:05.531Z",
+  "hash_mode": "UTF-8 normalized LF",
+  "note": "Functional sync to isolated hpbot namespace/account 1002. Source settings/data/secrets are not imported. HYOPU browser-login fixes, bootstrap fences, room, write flags and cost limits retained.",
+  "files": [
+    {
+      "source": "api/_jstt_berth_core.mjs",
+      "target": "api/_jstt_berth_core.mjs",
+      "source_sha256": "fd861f31b553b9ef9a564843b60f8f94237ffebb68cb9e17a406ae4be2fa1f20",
+      "target_sha256": "fd861f31b553b9ef9a564843b60f8f94237ffebb68cb9e17a406ae4be2fa1f20"
+    },
+    {
+      "source": "api/jstt_berth_watch.mjs",
+      "target": "api/jstt_berth_watch.mjs",
+      "source_sha256": "896cbec70d1fc5229e29038294f2f63f4ba8524e63b9b245885bdcceb095bb5f",
+      "target_sha256": "3986a05cfe4ef0f326275c98319fd502bb3f708f4c70d758018706e18a3fb0e6"
+    },
+    {
+      "source": "pilot-miniapp/jstt.js",
+      "target": "pilot-miniapp/jstt.js",
+      "source_sha256": "b20d0d58b318d5093b8346e1fbda9fe3c4de5ff1215c71f81c8e23f91bfe243c",
+      "target_sha256": "a8fa40b28aca138d6ebe08e3ab33c95295f607d15e574e7cf0b1bd8a7d2d932d"
+    },
+    {
+      "source": "supabase/functions/_shared/jstt.ts",
+      "target": "supabase/functions/_shared/jstt.ts",
+      "source_sha256": "70b186e803b159c89f4b10e585171a9340b0f6ba66638efa90006f30e6605966",
+      "target_sha256": "0ecea5e1eebfaab22e1bcf360349f1b2113700c96ccecff0ecfe06da73edce74"
+    },
+    {
+      "source": "supabase/functions/_shared/pilotSuspension.ts",
+      "target": "supabase/functions/_shared/pilotSuspension.ts",
+      "source_sha256": "94071d13b97bcdab72e3e7735bad7b02aaf1cb1bd4c7d952dc67ec118328242c",
+      "target_sha256": "94071d13b97bcdab72e3e7735bad7b02aaf1cb1bd4c7d952dc67ec118328242c"
+    },
+    {
+      "source": "supabase/functions/telegram-webhook/lib/formatters.ts",
+      "target": "supabase/functions/telegram-webhook/lib/formatters.ts",
+      "source_sha256": "e1d0d84204ed23c02915aee33f602276b8150b234adc3c2515193018f148819c",
+      "target_sha256": "056bbbeeb89ebaae25ccd96039e9fe3bd7c898548ae0a966822ffc8bfdd2918e"
+    },
+    {
+      "source": "supabase/functions/telegram-webhook/lib/runtime.ts",
+      "target": "supabase/functions/telegram-webhook/lib/runtime.ts",
+      "source_sha256": "4382c0dc5ca051b4b1cb57eaff186a4b2baba54ab111f8a1326aa9230ced10bd",
+      "target_sha256": "24427f55acdfc2e958a08eb9cdf252ea6c26126e142d7120c624c20661b367d0"
+    },
+    {
+      "source": "supabase/functions/ulsan-pilot-watcher/lib/source.ts",
+      "target": "supabase/functions/ulsan-pilot-watcher/lib/source.ts",
+      "source_sha256": "04ae9890db0cb7d16ede7c48e98255cb929d7b792f6e6f7bbb1bb54ad55b4e59",
+      "target_sha256": "04ae9890db0cb7d16ede7c48e98255cb929d7b792f6e6f7bbb1bb54ad55b4e59"
+    },
+    {
+      "source": "supabase/migrations/20260922002600_jstt_berth_quarantine.sql",
+      "target": "supabase/migrations/20260922003200_jstt_berth_quarantine.sql",
+      "source_sha256": "2c2340eb98a3c262dba75821ec62fc6fccff0a269a19fc3b0b248d0636c96a62",
+      "target_sha256": "466f21ed513b55d4aceaa64e2dbfdaab73dc794994bb0a763cc1b4cbd47e680f"
+    },
+    {
+      "source": "supabase/migrations/20260922002700_jstt_failure_collection_label.sql",
+      "target": "supabase/migrations/20260922003300_jstt_failure_collection_label.sql",
+      "source_sha256": "6dd384ecb0335b11e6fd8deed5cce9f8e26f9e5c5ef3f76ee836529dcd424441",
+      "target_sha256": "6dd384ecb0335b11e6fd8deed5cce9f8e26f9e5c5ef3f76ee836529dcd424441"
+    },
+    {
+      "source": "supabase/migrations/20260922002800_pilot_event_presentation.sql",
+      "target": "supabase/migrations/20260922003400_pilot_event_presentation.sql",
+      "source_sha256": "035ad69faa27217d56e71af0a3de4e58d1d999df80e857842fc3bc4ff3dd3b8e",
+      "target_sha256": "4aa5ee54f3cb8e75362e792257adef1dd07889243f88a0a7544704e7832996a8"
+    },
+    {
+      "source": "supabase/migrations/20260922002900_pilot_query_presentation.sql",
+      "target": "supabase/migrations/20260922003500_pilot_query_presentation.sql",
+      "source_sha256": "94e64dd71245d89e1218b791fe5dcfaf83d5fdcb990f908a2fff2efc72eb151c",
+      "target_sha256": "bec4f2e18bccd9393695cb12e5d0c417889a7da00a240bf09a7cff256ef59cdf"
+    },
+    {
+      "source": "supabase/migrations/20260922003000_pilot_suspension_core.sql",
+      "target": "supabase/migrations/20260922003600_pilot_suspension_core.sql",
+      "source_sha256": "74152b738902863dcc95363d7a2aae707628b61dab1020c4c4424c2870985eba",
+      "target_sha256": "fcb78d5abc8ebed99e682f59218ce6a120741d99b4685000cfb1fa73403aac0c"
+    },
+    {
+      "source": "supabase/migrations/20260922003100_pilot_suspension_presentation.sql",
+      "target": "supabase/migrations/20260922003700_pilot_suspension_presentation.sql",
+      "source_sha256": "6b02084728e30bbf9cd3867df5f56c9a262ad2864f960789a70652e3337736ef",
+      "target_sha256": "540bc8406b84717ff26f53b2893af9a4b1d189ad10c767dcca8bdcb00d494384"
+    }
+  ]
+}

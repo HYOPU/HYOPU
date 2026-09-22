@@ -12,7 +12,16 @@ TXT 업로드 또는 이메일 붙여넣기 → 부두/코스터별 검토 → H
 
 Vercel Framework Preset은 **Other**, 빌드 명령은 `npm run build`, 출력 폴더는 `dist`입니다 (`vercel.json`에 설정). PR 브랜치에 push하면 Git 연동 프리뷰가 배포됩니다. `.github/workflows/verify.yml`이 파서/실제 XLSX 재열기 회귀 테스트와 빌드를 실행합니다.
 
-이 저장소의 운영 경로는 `HYOPU/HYOPU` → Vercel `hestias-projects-57e91111/hyopu` → `https://hyopu-ten.vercel.app`입니다. 새 Vercel 프로젝트는 Git 자동 연결이 없으므로 검증된 `main` 커밋을 수동 배포·승격합니다. `jhmarine.kr`은 별도의 저장소/프로젝트이므로 이 프로젝트의 수정이나 배포 대상으로 사용하지 않습니다.
+**배포 중지 안내 (2026-09-22 재확인):** 이 문서의 이전 운영 경로 안내는 현재와
+다릅니다. Vercel `hestias-projects-57e91111/hyopu`는 실제로
+`Hestiafamily/hyopu-operations-workspace`의 `main`에 연결되어 있습니다.
+이 `HYOPU/HYOPU` 체크아웃을 `hyopu-ten.vercel.app`에 수동 배포하면 기존 운영
+사이트의 최신 기능을 오래된 기반 코드로 덮어쓸 수 있으므로 **다시 배포하지 마세요**.
+사용자 승인 후 도선봇은 `hyopu-pilot-bot.vercel.app` 전용 프로젝트로 분리했고,
+기존 사이트는 정상 Git 배포 `ae5be166`으로 복구했습니다. 봇 배포는 반드시
+`pilot-bot/`에서만 실행합니다. 이 루트의 운영 프로젝트 연결로 봇을 배포하지 마세요.
+근거와 복구 경계는 `pilot-bot/reports/2026-09-22-deployment-boundary.md`에 기록했습니다.
+`jhmarine.kr` 역시 별도 저장소/프로젝트이며 이 프로젝트의 배포 대상이 아닙니다.
 
 브라우저 진입점은 `app.js`이며 검증된 `sof-parser.mjs`, `sof-workbook.mjs`, `sof-export.mjs`를 직접 import합니다. 리포트 분석 버튼과 실제 번들 실행을 함께 회귀 테스트하여, 파서 테스트만 통과하고 화면에서는 작동하지 않는 문제를 방지합니다. 배포에 필요한 CSS와 `templates/agent-sof.xlsx`는 빌드 산출물에 함께 포함됩니다.
 
