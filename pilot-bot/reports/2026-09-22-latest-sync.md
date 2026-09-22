@@ -62,6 +62,13 @@ Vercel 원인: 현재 커밋 작성자 Hestiafamily에게 해당 프로젝트 �
 (`TEAM_ACCESS_REQUIRED`). 기존 운영 배포 `dpl_GX2zrPkzLYVbx4fKjjLQW4zDCHLm`는 READY로
 유지되며 새 배포에 별칭이 전환되지 않았다. 작성자 위장·Git 정보 제거·검사 우회는 하지 않았다.
 정상 계정 연결 또는 프로젝트 배포 승인 후 인앱/collector 배포와 새 수집 실증이 필요하다.
+Vercel 화면의 상세 안내는 GitHub noreply 이메일을 Git 계정과 연결하지 못했다는 것이다.
+현재 GitHub 인증 계정은 Hestiafamily/241668412로 커밋의 noreply ID와 일치함을 확인했다.
+다른 사람의 작성자나 이메일로 교체하지 않았으며, 개인 이메일 공개나 유료 좌석 추가도 하지 않았다.
+
+12:01KST 후속 감사에서도 11:20 이후 watcher42/42와 JSTT20분 예약3/3가 정상이다.
+배포가 막힌 새 Vercel 버전이 아니라 기존 collector가 새 DB와 호환되어 계속 수집한 결과다.
+중복 발송0, 부두 사건1건, 완료/청구/취소 활성 유입0, 외부 신청 제출0을 유지했다.
 
 ## 남은 검증
 
