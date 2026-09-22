@@ -99,3 +99,8 @@ bootstrap progress and estimated usage without returning secrets or snapshots.
 It reports whether 24 hours have elapsed; it cannot certify provider billing or
 external registration receipt. A zero duplicate count is only database evidence,
 not proof that every possible concurrent external action is prevented.
+
+GitHub runs the isolated `HYOPU pilot bot verification` workflow for module-related
+PRs and main updates. It uses Node 22 and two test workers, without production
+secrets or deployment rights. The existing portal verification remains separate;
+a green portal-only check is not evidence that the pilot module tests ran.
