@@ -86,3 +86,16 @@ HTML is ingress, not counted as Supabase billed egress. Supabase Pro Spend Cap
 is organization-wide and does not cover Vercel CPU/memory charges.
 
 See `reports/2026-09-22-hyopu-operations.md` for live evidence and limitations.
+
+For bounded, read-only operational follow-up, from `pilot-bot/` run:
+
+```powershell
+pnpm dlx supabase@2.117.0 db query --linked --project-ref nhujqbqygnhbnvmfmodi --file scripts/operations-audit.sql --output json
+```
+
+The audit counts missing full-minute watcher slots, JSTT 20-minute slots,
+unfinished work, outbox/receipt duplicates, terminal-state queue leakage, RLS,
+bootstrap progress and estimated usage without returning secrets or snapshots.
+It reports whether 24 hours have elapsed; it cannot certify provider billing or
+external registration receipt. A zero duplicate count is only database evidence,
+not proof that every possible concurrent external action is prevented.
