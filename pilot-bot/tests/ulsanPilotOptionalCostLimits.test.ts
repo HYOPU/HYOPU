@@ -8,7 +8,7 @@ const control=async()=> (await db.query<any>('select enabled,cost_limits_enabled
 const ledger=async()=> (await db.query<any>('select estimated_bytes::int n from pilot_usage order by scope')).rows.map(x=>x.n);
 beforeAll(async()=>{db=new PGlite();await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
  for(const f of ['20260920000000_ulsan_pilot_watcher','20260920000300_hpbot_operations','20260920000400_hpbot_telegram','20260920000500_hpbot_query_context','20260920000600_hpbot_mooring','20260920000700_pilot_registration','20260920000900_pilot_miniapp','20260920001100_pilot_copy_registration','20260920001200_pilot_budget_settlement','20260920001300_pilot_pob_date_labels','20260921001500_pilot_pob_identity','20260921001600_pilot_concise_notifications','20260921001700_jstt_berth_monitor','20260921001800_jstt_run_measurement','20260921002300_pilot_optional_cost_limits'])await db.exec(readFileSync('supabase/migrations/'+f+'.sql','utf8'));
- for(const f of ['20260922002400_pilot_notification_policy','20260922002500_pilot_event_titles'])await db.exec(readFileSync('supabase/migrations/'+f+'.sql','utf8'));
+ for(const f of ['20260922002400_pilot_notification_policy','20260922002500_pilot_event_titles','20260922003400_pilot_event_presentation','20260922003500_pilot_query_presentation'])await db.exec(readFileSync('supabase/migrations/'+f+'.sql','utf8'));
 },30000);
 afterAll(async()=>await db?.close());
 beforeEach(async()=>await db.exec(`truncate pilot_budget_reservations,jstt_budget_reservations,pilot_usage,pilot_miniapp_limits,pilot_notifications cascade;

@@ -49,10 +49,16 @@ select jsonb_build_object(
      where application_status in('050','060') and completion_status<>'COMPLETED'
         or application_status='090' and completion_status<>'CANCELLED')),
  'weather',(select jsonb_build_object('status',status,'bad_weather_count',bad_weather_count,
+   'dense_fog_count',to_jsonb(pilot_weather_state)->'dense_fog_count',
+   'port_close_count',to_jsonb(pilot_weather_state)->'port_close_count',
+   'suspension_total_count',to_jsonb(pilot_weather_state)->'suspension_total_count',
+   'suspension_reasons',to_jsonb(pilot_weather_state)->'suspension_reasons',
    'started_at',started_at,'resumed_at',resumed_at,'last_seen_at',last_seen_at)
    from public.pilot_weather_state where id),
  'jstt',(select jsonb_build_object('enabled',enabled,'disabled_reason',disabled_reason,
-   'last_success',last_success,'failure_count',failure_count,'last_error',last_error)
+   'last_success',last_success,'failure_count',failure_count,'last_error',last_error,
+   'unknown_count',to_jsonb(jstt_monitor_control)->'unknown_count',
+   'last_warning',to_jsonb(jstt_monitor_control)->'last_warning')
    from public.jstt_monitor_control where id),
  'jstt_window',(select jsonb_build_object('runs',count(*),'successful',count(*) filter(where success),
    'failed',count(*) filter(where success=false),'unfinished',count(*) filter(where success is null),

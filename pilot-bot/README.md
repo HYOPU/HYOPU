@@ -86,6 +86,8 @@ HTML is ingress, not counted as Supabase billed egress. Supabase Pro Spend Cap
 is organization-wide and does not cover Vercel CPU/memory charges.
 
 See `reports/2026-09-22-hyopu-operations.md` for live evidence and limitations.
+Latest functional sync, its production verification and the separate Vercel
+deployment blocker are recorded in `reports/2026-09-22-latest-sync.md`.
 
 For bounded, read-only operational follow-up, from `pilot-bot/` run:
 

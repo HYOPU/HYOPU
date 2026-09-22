@@ -48,9 +48,58 @@ describe('Korean Telegram commands',()=>{
  it.each(['협운일정','/협운일정','협운 일정','🚢 협운일정','/queue@test_bot'])('recognizes %s',text=>expect(parseCommand(text,'test_bot')?.name).toBe('queue'));
  it('ignores ordinary conversation, wrong bot mention and untrusted callbacks',()=>{expect(parseCommand('오늘 점심 뭐 먹을까요?')).toBeNull();expect(parseCommand('/queue@other','test_bot')).toBeNull();expect(parseCallback('v1:q:queue:-1')).toBeNull();});
  it('retains global sequence and overdue indicator in filtered display',()=>{const r=formatReply({name:'today'},state);expect(r.text).toContain('③ SHIP A');expect(r.text).toContain('예정시간 경과 / 미완료');});
- it('shows actual mooring or explicit unknown, never a guessed provider',()=>{
-   expect(formatReply({name:'queue'},state).text).toContain('강취: 미확인');
+ it('shows only confirmed mooring, never an unknown or guessed provider',()=>{
+   expect(formatReply({name:'queue'},state).text).not.toContain('강취:');
    expect(formatReply({name:'queue'},{...state,rows:[{...state.rows[0],mooring_name:'진산'}]}).text).toContain('강취: 진산');
+ });
+ it.each(['queue','today','tomorrow','three','search'])('uses verified operational state and hides administrative labels in %s',name=>{
+   for(const status of ['PROCESSING','POB']){
+    const reply=formatReply({name},{...state,rows:[{...state.rows[0],application_status:'030',operational_status:status}]}).text;
+    expect(reply).toContain(`공개: ${status}`);expect(reply).not.toContain('신청:');expect(reply).not.toContain('협운');
+   }
+   const bad=formatReply({name},{...state,rows:[{...state.rows[0],operational_status:'BAD_WEATHER'}]}).text;
+   expect(bad).toContain('⚠️ BAD WEATHER');expect(bad).not.toContain('공개:');
+ });
+ it.each([null,'','NORMAL','NONE','UNSPECIFIED','-','UNKNOWN'])('omits public row and internal value for ordinary status %j',operational_status=>{
+   const reply=formatReply({name:'queue'},{...state,rows:[{...state.rows[0],operational_status,forecast_status:'PROCESSING',match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE'}]}).text;
+   expect(reply).not.toContain('공개:');expect(reply).not.toContain('신청:');expect(reply).not.toContain('표시 없음');
+   expect(reply).not.toContain('공개 상태 미확인');expect(reply).not.toContain('PROCESSING');
+   if(operational_status&&operational_status!=='-')expect(reply).not.toContain(operational_status);
+ });
+ it('never treats unmatched or review-required forecast metadata as a current public status',()=>{
+   for(const row of [
+    {forecast_status:'PROCESSING'},
+    {forecast_status:'POB',match_basis:'UNMATCHED'},
+    {forecast_status:'PROCESSING',match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE',needs_review:true},
+    {application_status:'040',needs_review:true},
+    {operational_status:'PROCESSING',needs_review:true},
+   ]){
+    const reply=formatReply({name:'queue'},{...state,rows:[{...state.rows[0],...row}]}).text;
+    expect(reply).not.toContain('공개:');expect(reply).not.toContain('신청:');
+    if(row.needs_review)expect(reply).toContain('원본 상태·매칭 확인 필요');
+   }
+ });
+ it('supports safe legacy POB and uniquely matched operational values, but trusts explicit null from RPC',()=>{
+   for(const row of [{application_status:'040',forecast_status:null},{forecast_status:'P.O.B',match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE'}]){
+    expect(formatReply({name:'queue'},{...state,rows:[{...state.rows[0],...row}]}).text).toContain('공개: POB');
+   }
+   expect(formatReply({name:'queue'},{...state,rows:[{...state.rows[0],forecast_status:'PROCESSING',match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE'}]}).text).toContain('공개: PROCESSING');
+   expect(formatReply({name:'queue'},{...state,rows:[{...state.rows[0],application_status:'040',operational_status:null}]}).text).not.toContain('공개:');
+ });
+ it.each(['050','060','090'])('suppresses retained operational values on terminal row %s',application_status=>{
+   expect(formatReply({name:'queue'},{...state,rows:[{...state.rows[0],application_status,operational_status:'POB'}]}).text).not.toContain('공개:');
+ });
+ it('renders recent changes from semantic title and summary without raw history fallback',()=>{
+   const rows=[{application_id:'1',vessel_name:'SHIP A',detected_at:'2026-09-21T00:30:00Z',title:'⏰ [도선시간 변경]',summary:'SHIP A\n일시: 09/21(월) 0930 → 09/21(월) 1000'},
+    {application_id:'2',vessel_name:'OTHER',detected_at:'2026-09-21T00:30:00Z',event_type:'STATUS_CHANGED',application_status:'020'}];
+   const reply=formatReply({name:'changes'},{...state,rows}).text;
+   expect(reply).toContain('⏰ [도선시간 변경]');expect(reply).toContain('SHIP A\n일시:');expect(reply).not.toContain('OTHER');expect(reply).not.toContain('STATUS_CHANGED');
+   expect(formatReply({name:'changes'},{...state,rows:[rows[1]]}).text).toContain('표시할 변경 기록이 없습니다.');
+ });
+ it('omits default agency from weather rows and aggregate status',()=>{
+   expect(formatReply({name:'weather'},{...state,rows:[{...state.rows[0],agent:'협운'}]}).text).not.toContain('협운');
+   expect(formatReply({name:'status'},state).text).toContain('미완료 도선: 1건');
+   expect(formatReply({name:'status'},state).text).not.toContain('협운 미완료');
  });
  it('marks stale observations explicitly',()=>expect(formatReply({name:'status'},{...state,last_success:'2020-01-01'}).text).toContain('최신 자료가 아닙니다'));
  it('rejects forged secret before any database call',async()=>{const f=fake();expect((await createWebhook(config,f.fetcher)(request(update(),'wrong'))).status).toBe(401);expect(f.calls).toHaveLength(0);});

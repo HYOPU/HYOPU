@@ -3,7 +3,7 @@ import { collectJsttBerths } from './_jstt_berth_browser.mjs';
 import { jsttWindow, safeJsttError } from './_jstt_berth_core.mjs';
 import { loadJsttScheduleConfig } from './_jstt_schedule_core.mjs';
 
-export function createJsttBerthHandler({env=process.env,fetcher=fetch,collect=collectJsttBerths}={}) {
+export function createJsttBerthHandler({env=process.env,fetcher=fetch,collect=collectJsttBerths,logger=console}={}) {
  return async(req,res)=>{
   res.setHeader('Cache-Control','no-store');
   if(req.method!=='POST')return res.status(405).end();
@@ -36,12 +36,17 @@ export function createJsttBerthHandler({env=process.env,fetcher=fetch,collect=co
    const snapshot=await collect(config.credentials,jsttWindow(),meter);
    const result=await rpc('jstt_apply',{p_id:id,p_version:context.version,p_hash:snapshot.hash,
     p_rows:probe||snapshot.hash!==context.hash?snapshot.rows:null,p_ingress:meter.ingress,p_duration:Date.now()-started});
+   if(snapshot.quality?.unknown_count)logger.warn(JSON.stringify({component:'jstt_berth',event:'BERTH_QUARANTINED',run_id:id,
+    unknown_count:snapshot.quality.unknown_count,samples:snapshot.quality.samples}));
    await rpc('jstt_settle',{p_id:id,p_bytes:meter.total+4096});
-   if(probe)return res.status(200).json({...result,window:snapshot.window,hash:snapshot.hash,estimated_bytes:meter.total,
+   if(probe)return res.status(result.accepted?200:409).json({...result,window:snapshot.window,hash:snapshot.hash,quality:snapshot.quality,estimated_bytes:meter.total,
     hyopu:snapshot.rows.filter(r=>r.agency_name==='협운해운(주)'&&r.source_status!=='이안').map(r=>({vessel:r.vessel_name,etb:r.schedule_datetime,berth:r.raw_berth})),cache_hits:meter.cacheHits??0,duration_ms:Date.now()-started});
    return res.status(204).end();
   }catch(error){
    const code=meter.blocked?'JSTT_BYTE_LIMIT':safeJsttError(error);
+   // Fixed code only: never log browser errors, credentials, HTML or headers.
+   logger.error(JSON.stringify({component:'jstt_berth',event:'COLLECTION_FAILED',run_id:id,code,duration_ms:Date.now()-started,
+    estimated_bytes:meter.total,ingress_bytes:meter.ingress}));
    if(claimed&&rpc){await rpc('jstt_fail',{p_id:id,p_error:code}).catch(()=>{});if(!meter.uncertain)await rpc('jstt_settle',{p_id:id,p_bytes:meter.total+4096}).catch(()=>{});}
    return probe?res.status(502).json({error:code,estimated_bytes:meter.total,ingress_bytes:meter.ingress,duration_ms:Date.now()-started,...(meter.loginDiagnostic?{login_diagnostic:meter.loginDiagnostic}:{}),...(meter.loginInputDiagnostic?{input_diagnostic:meter.loginInputDiagnostic}:{}),...(meter.loginNotice?{login_notice:meter.loginNotice}:{}),...(meter.gridDiagnostic?{grid_diagnostic:meter.gridDiagnostic}:{})}):res.status(204).end();
   }

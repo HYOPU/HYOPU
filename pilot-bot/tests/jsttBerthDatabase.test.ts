@@ -7,6 +7,7 @@ const base=Date.parse('2026-09-21T03:00:00Z');
 const now=()=>new Date(base+tick++*60000).toISOString();
 const rpc=async(name:string,args:any[]=[])=> (await db.query<any>(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) v`,args)).rows[0].v;
 const row=(berth='UNASSIGNED',id='202609140008',agency='협운해운(주)')=>({schedule_key:id,vessel_name:'ARGENT IRIS',agency_name:agency,schedule_datetime:'2026-09-23 07:00',port_in_datetime:'2026-09-21 06:00',departure_datetime:null,source_status:'계획',raw_berth:berth==='UNASSIGNED'?'대기':berth,normalized_berth:berth});
+const unknownRow=(raw='미검증부두',id='202609140008',agency='협운해운(주)')=>({...row('UNKNOWN',id,agency),raw_berth:raw,berth_verified:false});
 async function observe(rows:any[]|null,hash?:string){const id=crypto.randomUUID(),at=now();const b=await rpc('jstt_begin',[id,false,false,at]);expect(b.skip).toBeUndefined();await db.query('update jstt_monitor_control set lease_until=now()+interval \'1 day\'');await rpc('jstt_claim',[id]);const result=await rpc('jstt_apply',[id,b.version,hash??String(tick).padStart(64,'0'),rows,123,100,at]);await rpc('jstt_settle',[id,4096]);return result;}
 const events=async()=> (await db.query<any>('select event_type,old_berth,new_berth,revision from jstt_berth_events order by detected_at,revision')).rows;
 beforeAll(async()=>{db=new PGlite();await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
@@ -16,9 +17,15 @@ beforeAll(async()=>{db=new PGlite();await db.exec('create role anon;create role 
  await db.exec(readFileSync('supabase/migrations/20260921002100_jstt_partial_range_guard.sql','utf8'));
  await db.exec(readFileSync('supabase/migrations/20260921002200_jstt_observed_modified_request.sql','utf8'));
  for(const f of ['20260921001500_pilot_pob_identity','20260921001600_pilot_concise_notifications','20260922002400_pilot_notification_policy','20260922002500_pilot_event_titles'])await db.exec(readFileSync('supabase/migrations/'+f+'.sql','utf8'));
- await db.exec(readFileSync('supabase/migrations/20260922003000_jstt_observed_fourth_berth.sql','utf8'));
+ await db.exec(readFileSync('supabase/migrations/20260922003200_jstt_berth_quarantine.sql','utf8'));
+ await db.exec(readFileSync('supabase/migrations/20260922003300_jstt_failure_collection_label.sql','utf8'));
+ for(const f of ['20260922003400_pilot_event_presentation','20260922003500_pilot_query_presentation'])await db.exec(readFileSync('supabase/migrations/'+f+'.sql','utf8'));
 },30000);
 afterAll(async()=>await db?.close());
+it('failure message labels last collection without claiming all berths were verified',async()=>{
+ const definition=(await db.query<any>("select pg_get_functiondef('public.jstt_fail(uuid,text,timestamptz)'::regprocedure) v")).rows[0].v;
+ expect(definition).toContain('마지막 수집: ');expect(definition).not.toContain('마지막 정상확인: ');
+});
 beforeEach(async()=>{tick=0;await db.exec(`truncate jstt_berth_events,jstt_schedule_delivery,jstt_schedule_state,jstt_vessel_watchlist,jstt_monitor_runs,jstt_budget_reservations,jstt_ui_requests,pilot_telegram_updates,pilot_notifications,pilot_notification_attempts,pilot_usage cascade;
 delete from pilot_watcher_control;insert into pilot_watcher_control(id,enabled,billing_verified_at,cycle_start,cycle_end)values(true,true,now(),'2000-01-01','2100-01-01');
 delete from jstt_monitor_control;insert into jstt_monitor_control(id,enabled,billing_verified_at)values(true,true,now());
@@ -26,10 +33,6 @@ insert into pilot_telegram_chats(chat_id)values('-1')on conflict do nothing;upda
 it.each(['요청','수정요청'])('observed %s status is accepted without changing unassigned/event semantics',async(status)=>{
  await observe([{...row(),source_status:status}]);expect(await events()).toHaveLength(0);
  await observe([{...row('N3'),source_status:status}]);expect(await events()).toHaveLength(1);
-});
-it('observed fourth berth is assigned once and unchanged polling does not replay',async()=>{
- await observe([row('4부두')]);await observe([row('4부두')]);
- expect(await events()).toMatchObject([{event_type:'INITIAL_ASSIGNED',new_berth:'4부두'}]);
 });
 it('scheduled JSTT runs only at 00/20/40; manual uses original lease/cooldown path',async()=>{
  for(const minute of [0,1,19,20,21,39,40,41,59]){
@@ -50,11 +53,11 @@ it('already assigned bootstrap once; ETA/date changes and hash fast path do not 
  await observe([row('N4'),row('N3','202609220001')]);expect(await events()).toHaveLength(2);
 });
 it('other agencies are ignored until exact agency/name or any-agency watch added',async()=>{
- await observe([row('N3','202609140008','윌헴슨')]);expect(await events()).toHaveLength(0);
+ await observe([row('N3','202609140008','OTHER AGENCY')]);expect(await events()).toHaveLength(0);
  await db.exec("insert into jstt_vessel_watchlist(chat_id,agency_name,vessel_name,normalized_vessel_name,created_by_telegram_id)values('-1',null,'ARGENT IRIS','ARGENT IRIS',1)");
- await observe([row('N3','202609140008','윌헴슨')]);expect(await events()).toHaveLength(1);
- await db.exec('update jstt_vessel_watchlist set enabled=false');await observe([row('N3','202609140008','윌헴슨')]);
- await db.exec('update jstt_vessel_watchlist set enabled=true');await observe([row('N3','202609140008','윌헴슨')]);expect(await events()).toHaveLength(1);
+ await observe([row('N3','202609140008','OTHER AGENCY')]);expect(await events()).toHaveLength(1);
+ await db.exec('update jstt_vessel_watchlist set enabled=false');await observe([row('N3','202609140008','OTHER AGENCY')]);
+ await db.exec('update jstt_vessel_watchlist set enabled=true');await observe([row('N3','202609140008','OTHER AGENCY')]);expect(await events()).toHaveLength(1);
 });
 it('automatic Hyopu omits agency text, watchlisted other agency retains it in body',async()=>{
  await db.exec("insert into jstt_vessel_watchlist(chat_id,agency_name,vessel_name,normalized_vessel_name,created_by_telegram_id)values('-1',null,'OTHER SHIP','OTHER SHIP',1)");
@@ -138,4 +141,96 @@ it('settlement is idempotent and charging an overrun stops only JSTT',async()=>{
 it('normal execution requires separate JSTT billing verification; probes remain bounded',async()=>{
  await db.exec('update jstt_monitor_control set billing_verified_at=null');expect((await rpc('jstt_begin',[crypto.randomUUID(),false,false,now()])).skip).toBe('BILLING_REQUIRED');
  expect((await rpc('jstt_begin',[crypto.randomUUID(),false,true,now()])).skip).toBeUndefined();
+});
+it('accepts live-observed 4부두 and preserves event semantics',async()=>{
+ await observe([row()]);await observe([{...row('4부두'),berth_verified:true}]);await observe([row('4부두')]);
+ expect((await events()).map(e=>e.new_berth)).toEqual(['4부두']);
+});
+it('unverified other-agency row is quarantined while a valid Hyopu assignment progresses',async()=>{
+ const result=await observe([row('N4'),unknownRow('새 부두','202609220099','다른대리점')]);
+ expect(result).toMatchObject({accepted:true,quality:'DEGRADED',quality_status:'DEGRADED',unknown_count:1,events:1});
+ expect((await events()).map(e=>e.new_berth)).toEqual(['N4']);
+ const health=await rpc('jstt_read',['-1','health']);expect(health).toMatchObject({failure_count:0,last_error:null,unknown_count:1,last_warning:'JSTT_BERTH_UNVERIFIED',quality:'DEGRADED',quality_status:'DEGRADED'});
+});
+it('N4 to unknown preserves trusted berth/cursor, presence and hash-fast-path quality',async()=>{
+ await observe([row('N4')]);
+ const trusted=(await db.query<any>('select last_verified_at from jstt_schedule_state')).rows[0].last_verified_at;
+ await observe([unknownRow('')],'a'.repeat(64));await observe(null,'a'.repeat(64));
+ expect(await events()).toHaveLength(1);
+ expect((await db.query<any>('select raw_berth,normalized_berth,observed_raw_berth,berth_verified,last_verified_at,missing_count,lifecycle from jstt_schedule_state')).rows[0]).toEqual({raw_berth:'N4',normalized_berth:'N4',observed_raw_berth:'',berth_verified:false,last_verified_at:trusted,missing_count:0,lifecycle:'ACTIVE'});
+ expect((await db.query<any>('select last_berth,event_revision from jstt_schedule_delivery')).rows[0]).toMatchObject({last_berth:'N4',event_revision:1});
+ expect((await rpc('jstt_read',['-1'])).rows[0]).toMatchObject({observed_raw_berth:'',berth_verified:false,normalized_berth:'N4'});
+ expect(await rpc('jstt_read',['-1','health'])).toMatchObject({unknown_count:1,quality:'DEGRADED'});
+ await observe([row('N4')]);expect(await events()).toHaveLength(1);
+ await observe([unknownRow('J3')]);await observe([row('N3')]);
+ expect((await events()).map(e=>[e.old_berth,e.new_berth])).toEqual([[null,'N4'],['N4','N3']]);
+});
+it('new unknown creates no delivery cursor; later verified berth bootstraps once',async()=>{
+ await observe([unknownRow('TBA')]);expect(await events()).toHaveLength(0);
+ expect((await db.query('select * from jstt_schedule_delivery')).rows).toHaveLength(0);
+ expect((await db.query<any>('select normalized_berth,last_verified_at from jstt_schedule_state')).rows[0]).toEqual({normalized_berth:'UNKNOWN',last_verified_at:null});
+ await observe([row('4부두')]);await observe([row('4부두')]);
+ expect((await events()).map(e=>e.event_type)).toEqual(['INITIAL_ASSIGNED']);
+});
+it('unverified departed row archives without release and cannot block other schedules',async()=>{
+ await observe([row('N4')]);
+ expect(await observe([{...unknownRow('-'),source_status:'이안'},row('N3','202609220002')])).toMatchObject({unknown_count:0,quality_status:'HEALTHY'});
+ expect((await events()).map(e=>e.event_type)).toEqual(['INITIAL_ASSIGNED','INITIAL_ASSIGNED']);
+ expect((await db.query<any>("select lifecycle,missing_count,normalized_berth from jstt_schedule_state where schedule_key='202609140008'")).rows[0]).toEqual({lifecycle:'ARCHIVED',missing_count:0,normalized_berth:'N4'});
+ expect(await rpc('jstt_read',['-1','health'])).toMatchObject({unknown_count:0,last_warning:null,quality_status:'HEALTHY'});
+ const run=(await db.query<any>('select warnings,unknown_count from jstt_monitor_runs order by started_at desc limit 1')).rows[0];expect(run.unknown_count).toBe(0);expect(run.warnings).toHaveLength(1);
+});
+it('five-failure outage only recovers once after a fully verified snapshot',async()=>{
+ await observe([row('N4')]);
+ for(let i=0;i<5;i++){const id=crypto.randomUUID(),at=now();await rpc('jstt_begin',[id,false,false,at]);await rpc('jstt_fail',[id,'JSTT_BERTH_UNKNOWN',at]);await rpc('jstt_settle',[id,4096]);}
+ await observe([unknownRow('J3')],'a'.repeat(64));await observe(null,'a'.repeat(64));
+ expect((await db.query<any>('select failure_count,recovery_pending,unknown_count from jstt_monitor_control')).rows[0]).toEqual({failure_count:0,recovery_pending:true,unknown_count:1});
+ expect((await db.query("select * from pilot_notifications where notification_type='JSTT_RECOVERY'")).rows).toHaveLength(0);
+ await observe([row('N4')]);await observe([row('N4')]);
+ expect((await db.query("select * from pilot_notifications where notification_type='JSTT_RECOVERY'")).rows).toHaveLength(1);
+ expect((await db.query<any>('select recovery_pending,outage_id,unknown_count,last_warning from jstt_monitor_control')).rows[0]).toEqual({recovery_pending:false,outage_id:null,unknown_count:0,last_warning:null});
+ expect(await rpc('jstt_read',['-1','health'])).toMatchObject({quality_status:'HEALTHY'});
+ expect(await events()).toHaveLength(1);
+});
+it('quarantine uses the latest verified hash-hit timestamp, but never a missing observation',async()=>{
+ await observe([row('N4')],'a'.repeat(64));await observe(null,'a'.repeat(64));await observe(null,'a'.repeat(64));
+ const priorSuccess=(await db.query<any>('select last_success from jstt_monitor_control')).rows[0].last_success;
+ await observe([unknownRow('?')]);
+ expect((await db.query<any>('select last_verified_at from jstt_schedule_state')).rows[0].last_verified_at).toEqual(priorSuccess);
+ await observe([row('N4')]);
+ const verified=(await db.query<any>('select last_verified_at from jstt_schedule_state')).rows[0].last_verified_at;
+ const other=row('N3','202609220002','협운');await observe([other]);await observe([other]);
+ await observe([unknownRow('?'),other]);
+ expect((await db.query<any>("select last_verified_at from jstt_schedule_state where schedule_key='202609140008'")).rows[0].last_verified_at).toEqual(verified);
+});
+it('complete 31-row snapshot with 18 quarantined berths is not a partial-range loss',async()=>{
+ const all=Array.from({length:31},(_,i)=>row('N4',String(202609210001+i),'협운'));
+ await observe(all);expect((await observe(all.map((r,i)=>i<13?r:unknownRow('?',r.schedule_key,'협운')))).accepted).toBe(true);
+ expect((await db.query<any>('select count(*) n from jstt_schedule_state where missing_count>0')).rows[0].n).toBe(0);
+ expect((await db.query<any>('select unknown_count from jstt_monitor_control')).rows[0].unknown_count).toBe(18);
+ const run=(await db.query<any>('select warnings from jstt_monitor_runs order by started_at desc limit 1')).rows[0];expect(run.warnings).toHaveLength(10);
+});
+it.each([
+ ()=>({...unknownRow(),berth_verified:true}),
+ ()=>({...unknownRow(),berth_verified:undefined}),
+ ()=>unknownRow('대기'),()=>unknownRow('4부두'),
+ ()=>({...row('N4'),berth_verified:false}),
+ ()=>({...row('N4'),raw_berth:'new-raw'}),
+ ()=>({...row('NEW-BERTH'),berth_verified:true}),
+ ()=>({...unknownRow(),raw_berth:'a'.repeat(161)}),
+ ()=>({...unknownRow(),raw_berth:'bad\nraw'}),
+])('rejects inconsistent or untrusted berth evidence without modifying source',async(makeRow)=>{
+ await expect(observe([makeRow()])).rejects.toThrow();
+ expect((await db.query('select * from jstt_schedule_state')).rows).toHaveLength(0);expect(await events()).toHaveLength(0);
+});
+it('duplicate IDs across verified/quarantined rows remain a fatal snapshot violation',async()=>{
+ await expect(observe([row('N4'),unknownRow('J3')])).rejects.toThrow('JSTT_ROWS_INVALID');
+ expect((await db.query('select * from jstt_schedule_state')).rows).toHaveLength(0);
+});
+it('quarantine probe returns bounded diagnostics without source/cursor/health/outbox writes',async()=>{
+ const id=crypto.randomUUID(),at=now(),b=await rpc('jstt_begin',[id,false,true,at]);await db.exec("update jstt_monitor_control set lease_until=now()+interval '1 day'");await rpc('jstt_claim',[id]);
+ const preview=await rpc('jstt_apply',[id,b.version,'a'.repeat(64),[row('N4'),unknownRow('J3','202609220002')],100,123,at]);
+ expect(preview).toMatchObject({accepted:true,quality:'DEGRADED',unknown_count:1});expect(preview.events).toHaveLength(1);expect(preview.warnings).toHaveLength(1);
+ for(const table of ['jstt_schedule_state','jstt_schedule_delivery','jstt_berth_events','pilot_notifications'])expect((await db.query('select * from '+table)).rows).toHaveLength(0);
+ expect((await db.query<any>('select unknown_count,last_warning,last_success,version from jstt_monitor_control')).rows[0]).toEqual({unknown_count:0,last_warning:null,last_success:null,version:0});
 });

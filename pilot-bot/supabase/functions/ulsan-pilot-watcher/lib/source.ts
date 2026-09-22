@@ -1,4 +1,5 @@
 import { parseFragment } from "parse5";
+import { normalizePilotSuspensionStatus } from '../../_shared/pilotSuspension.ts';
 
 export const SOURCES = [
   { day: 0, cancelled: false, path: "get_cz_or_assign_s.php" },
@@ -26,7 +27,8 @@ export interface PilotRow {
 export const clean = (s: string) => s.normalize("NFKC").replace(/\s+/gu, " ").trim();
 export function normalizeStatus(s: string): string {
   const value = clean(s).toUpperCase();
-  if (value === "BAD WEATHER") return "BAD_WEATHER";
+  const suspension = normalizePilotSuspensionStatus(value);
+  if (suspension) return suspension;
   if (value === "PROCESSING") return "PROCESSING";
   return value || "UNSPECIFIED";
 }

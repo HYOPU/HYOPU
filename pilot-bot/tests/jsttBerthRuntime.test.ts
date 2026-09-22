@@ -46,3 +46,20 @@ it('browser budget exhaustion retains space for failure and settlement without i
  await createJsttBerthHandler({env,fetcher,collect})({method:'POST',headers:{'x-jstt-key':'x'.repeat(32)},body:{probe:true}},res);
  expect(result.error).toBe('JSTT_BYTE_LIMIT');expect(calls).toContain('jstt_fail');expect(calls).toContain('jstt_settle');expect(captured.total).toBeLessThanOrEqual(131072);
 });
+it('quarantined collection is applied with quality diagnostics, without global failure',async()=>{
+ const calls:any[]=[];const logger={warn:vi.fn(),error:vi.fn()};let result:any;
+ const collect=async()=>({rows:[{schedule_key:'202609220099',raw_berth:'NEW',normalized_berth:'UNKNOWN',berth_verified:false}],hash:'b'.repeat(64),window:{},quality:{status:'DEGRADED',unknown_count:1,samples:[{schedule_key:'202609220099',raw_berth:'NEW'}]}});
+ const fetcher:any=async(url:string,init:any)=>{const n=url.split('/').pop();calls.push([n,JSON.parse(init.body)]);return Response.json(n==='jstt_claim'?{version:1,hash:null}:n==='jstt_apply'?{accepted:true}:{});};
+ const env={JSTT_BERTH_KEY:'x'.repeat(32),JSTT_SCHEDULE_USER_ID:'secret-user',JSTT_SCHEDULE_PASSWORD:'secret-password',SUPABASE_URL:'https://test.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'a'.repeat(40)};
+ const res:any={setHeader(){},status(){return this;},end(){},json(x:any){result=x;}};
+ await createJsttBerthHandler({env,collect,fetcher,logger})({method:'POST',headers:{'x-jstt-key':'x'.repeat(32)},body:{probe:true}},res);
+ expect(result.quality.status).toBe('DEGRADED');expect(calls.some(x=>x[0]==='jstt_fail')).toBe(false);
+ expect(logger.warn).toHaveBeenCalledOnce();expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('secret-');
+});
+it('failure logs fixed code and counters, never raw error details or credentials',async()=>{
+ const logger={warn:vi.fn(),error:vi.fn()};const fetcher:any=async(url:string)=>Response.json(url.endsWith('jstt_claim')?{version:1,hash:null}:{});
+ const env={JSTT_BERTH_KEY:'x'.repeat(32),JSTT_SCHEDULE_USER_ID:'user',JSTT_SCHEDULE_PASSWORD:'password',SUPABASE_URL:'https://test.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'a'.repeat(40)};
+ const collect=async()=>{throw Error('password=PRIVATE https://secret.invalid');};const res:any={setHeader(){},status(){return this;},end(){},json(){}};
+ await createJsttBerthHandler({env,fetcher,collect,logger})({method:'POST',headers:{'x-jstt-key':'x'.repeat(32)},body:{probe:true}},res);
+ expect(JSON.stringify(logger.error.mock.calls)).toContain('JSTT_COLLECTION_FAILED');expect(JSON.stringify(logger.error.mock.calls)).not.toContain('PRIVATE');
+});

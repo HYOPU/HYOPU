@@ -27,6 +27,10 @@ beforeAll(async()=>{db=new PGlite();await db.exec('create role anon; create role
  await db.exec(readFileSync('supabase/migrations/20260921001600_pilot_concise_notifications.sql','utf8'));
  await db.exec(readFileSync('supabase/migrations/20260922002400_pilot_notification_policy.sql','utf8'));
  await db.exec(readFileSync('supabase/migrations/20260922002500_pilot_event_titles.sql','utf8'));
+ await db.exec(readFileSync('supabase/migrations/20260922003400_pilot_event_presentation.sql','utf8'));
+ await db.exec(readFileSync('supabase/migrations/20260922003500_pilot_query_presentation.sql','utf8'));
+ await db.exec(readFileSync('supabase/migrations/20260922003600_pilot_suspension_core.sql','utf8'));
+ await db.exec(readFileSync('supabase/migrations/20260922003700_pilot_suspension_presentation.sql','utf8'));
 },30000);
 afterAll(async()=>{await db?.close();});
 beforeEach(async()=>{await db.exec(`truncate pilot_schedule_notification_events,pilot_schedule_notification_revisions,pilot_telegram_updates,pilot_telegram_confirmations,pilot_telegram_chats,hpbot_pilot_current,hpbot_pilot_history,hpbot_source_snapshots,hpbot_collection_ranges,pilot_monitor_logs,pilot_notifications,pilot_notification_attempts,pilot_weather_events,pilot_snapshots,pilot_runs,pilot_usage;
@@ -41,7 +45,7 @@ describe('login truth reducer',()=>{
    expect(text.split('SHIP 1')).toHaveLength(2);
    expect(text).toContain('일시: 09/20(일) 1200 → 09/20(일) 1400');
    expect(text).toContain('구간: P/S → OTK(S) ⇒ P/S → JSTT');
-   expect(text).not.toContain('신청:');expect(text).toContain('강취: 글로');expect(text).toContain('SHIP 1 — 일정 변경');
+   expect(text).not.toContain('신청:');expect(text).toContain('강취: 글로');expect(text.split('\n')[0]).toBe('⏰ [도선시간 변경]');expect(text).not.toContain('SHIP 1 —');
    expect(text).toContain('비고: 접안 전 연락 → 접안 후 연락');
  });
  it.each([['','검역 후 승선','없음 → 검역 후 승선'],['검역 후 승선','','검역 후 승선 → 없음'],[null,'새 비고','미확인 → 새 비고']])('shows remark addition/removal/missing evidence accurately: %s',async(before,after,expected)=>{
@@ -162,7 +166,7 @@ describe('login truth reducer',()=>{
    expect(await rpc('pilot_date_label',['2026-09-21',null])).toBe('09/21(월) 시간 미정');
    expect(await rpc('pilot_kst_label',['2026-09-20T15:00:00Z'])).toBe('09/21(월) 0000');
    const message=await rpc('pilot_weather_message',[j({type:'RESUME',method:'HYOPU_TRANSITION',vessel:app('1','040',{pilot_date:'2026-09-21',pilot_time:'09:30',mooring_name:'글로',sequence_no:1})}),j({started_at:at(0)}),'2026-09-21T00:30:00Z']);
-   expect(message).toContain('시간: 09/21(월) 0930');expect(message).toContain('재개 감지: 09/21(월) 0930');
+   expect(message).toContain('일시: 09/21(월) 0930');expect(message).toContain('재개 감지: 09/21(월) 0930');
    expect(message).toContain('강취: 글로');expect(message).toContain('현재 순번: 1번');expect(message).not.toContain('협운');
  });
  it('registration status includes KST today through day 7; excludes day -1/day 8 and all terminal statuses',async()=>{
@@ -296,14 +300,14 @@ describe('notification policy: allowed semantic changes only',()=>{
   expect((await db.query('select count(*)::int n from pilot_schedule_notification_events')).rows[0].n).toBe(0);
  });
  it.each([
-  ['time',{pilot_time:'07:35'},'시간 변경','PILOT_DATETIME_CHANGED'],
-  ['date',{pilot_date:'2026-09-21'},'시간 변경','PILOT_DATETIME_CHANGED'],
-  ['route',{to_location:'JSTT'},'구간 변경','ROUTE_CHANGED'],
-  ['remark',{remarks:'KEYOUNG STAR 이안 후 / 확정'},'비고 변경','REMARK_CHANGED'],
+  ['time',{pilot_time:'07:35'},'⏰ [도선시간 변경]','PILOT_DATETIME_CHANGED'],
+  ['date',{pilot_date:'2026-09-21'},'📅 [도선일자 변경]','PILOT_DATETIME_CHANGED'],
+  ['route',{to_location:'JSTT'},'🧭 [도선구간 변경]','ROUTE_CHANGED'],
+  ['remark',{remarks:'KEYOUNG STAR 이안 후 / 확정'},'📝 [비고 변경]','REMARK_CHANGED'],
  ])('C/D/E: %s change creates one semantic event and receipt',async(_,extra,label,event)=>{
   const a=app('1','030',{pilot_time:'07:30',remarks:'KEYOUNG STAR 이안 후'});
   await tick(0,[a],[forecast('1','UNSPECIFIED')]);await tick(1,[{...a,...extra,application_status:'020'}],null);
-  const ns=await notices();expect(ns).toHaveLength(1);expect(ns[0].message).toContain(`SHIP 1 — ${label}`);
+  const ns=await notices();expect(ns).toHaveLength(1);expect(ns[0].message.split('\n')[0]).toBe(label);expect(ns[0].message).not.toContain('SHIP 1 —');
   expect(ns[0].message).not.toContain('신청:');expect(ns[0].message).not.toContain('공개:');
   const ledger=(await db.query<{changes:any}>('select changes from pilot_schedule_notification_events')).rows;
   expect(ledger).toHaveLength(1);expect(ledger[0].changes.map((c:any)=>c.type)).toEqual([event]);
@@ -343,7 +347,7 @@ describe('notification policy: allowed semantic changes only',()=>{
   const a=app('1','030',{remarks:'KEYOUNG STAR 이안 후'});await tick(0,[a],[forecast()]);
   await tick(1,[{...a,application_status:'020',pilot_time:'14:00',to_location:'JSTT',remarks:'KEYOUNG STAR 이안 후 / 확정'}],[forecast('1','PROCESSING',{to_location:'JSTT'})]);
   const ns=await notices();expect(ns).toHaveLength(1);const text=ns[0].message;
-  expect(text.split('SHIP 1')).toHaveLength(2);expect(text).toContain('— 일정 변경');
+  expect(text.split('SHIP 1')).toHaveLength(2);expect(text.split('\n')[0]).toBe('🔄 [PROCESSING]');expect(text).not.toContain('[도선일정 변경]');
   for(const key of ['일시:','구간:','비고:','상태:'])expect(text).toContain(key);
   expect(text).toContain('공개: PROCESSING');expect(text).not.toContain('신청:');
   expect((await db.query<{changes:any}>('select changes from pilot_schedule_notification_events')).rows[0].changes).toHaveLength(4);
@@ -406,6 +410,8 @@ describe('notification policy: allowed semantic changes only',()=>{
  });
  it.each([
   ['TIME_CHANGED',{pilot_time:'13:00'},'⏰ [도선시간 변경]'],
+  ['TIME_CHANGED',{pilot_date:'2026-09-21'},'📅 [도선일자 변경]'],
+  ['TIME_CHANGED',{pilot_date:'2026-09-21',pilot_time:'13:00'},'📅 [도선일자 변경]'],
   ['ROUTE_CHANGED',{to_location:'JSTT'},'🧭 [도선구간 변경]'],
   ['REMARK_CHANGED',{remarks:'확정'},'📝 [비고 변경]'],
   ['STATUS_CHANGED',{forecast_status:'PROCESSING'},'🔄 [PROCESSING]'],
@@ -418,6 +424,65 @@ describe('notification policy: allowed semantic changes only',()=>{
   const old=app('1','020',{forecast_status:'UNSPECIFIED',match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE'});
   const text=(await rpc('hpbot_schedule_messages',[j([{type,old:type==='NEW'?null:old,new:{...old,...extra},operational_continuous:true}])]))[0];
   expect(text.split('\n')[0]).toBe(title);expect(text).not.toContain('협운');
+ });
+ it.each([
+  ['POB',{application_status:'040'},'🚢 [POB · 도선사 승선]'],
+  ['BAD_WEATHER',{forecast_status:'BAD_WEATHER'},'⚠️ [BAD WEATHER]'],
+  ['PROCESSING',{forecast_status:'PROCESSING'},'🔄 [PROCESSING]'],
+ ])('changed %s outranks simultaneous datetime/route/remark but yields one message',async(_,status,title)=>{
+  const old=app('1','020',{forecast_status:'UNSPECIFIED',match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE',remarks:'이전 비고'});
+  const next={...old,...status,pilot_date:'2026-09-21',pilot_time:'13:00',to_location:'JSTT',remarks:'현재 비고',display_sequence:2};
+  const changes=['TIME_CHANGED','ROUTE_CHANGED','REMARK_CHANGED','STATUS_CHANGED'].map(type=>({type,old,new:next,operational_continuous:true}));
+  const messages=await rpc('hpbot_schedule_messages',[j(changes)]);expect(messages).toHaveLength(1);
+  const text=messages[0];expect(text.split('\n')[0]).toBe(title);expect(text).toContain('현재 순번: 2번');
+  expect(text).toContain('일시: 09/20(일) 1200 → 09/21(월) 1300');expect(text).toContain('구간: P/S → OTK(S) ⇒ P/S → JSTT');
+  expect(text).toContain('비고: 이전 비고 → 현재 비고');expect(text).not.toContain('신청:');expect(text).not.toContain(' — ');
+ });
+ it.each(['040','020'])('persisted operational state %s does not steal a time-only title',async(application_status)=>{
+  const old=app('1',application_status,{forecast_status:'PROCESSING',match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE',remarks:'승선 전 연락'});
+  const messages=await rpc('hpbot_schedule_messages',[j([{type:'TIME_CHANGED',old,new:{...old,pilot_time:'13:00'}}])]);
+  expect(messages).toHaveLength(1);expect(messages[0].split('\n')[0]).toBe('⏰ [도선시간 변경]');
+  expect(messages[0]).toContain(`공개: ${application_status==='040'?'POB':'PROCESSING'}`);expect(messages[0]).not.toContain('상태:');
+ });
+ it.each([['COMPLETED','050','✅ [도선완료]'],['COMPLETED','060','✅ [도선완료]'],['CANCELLED','090','❌ [도선취소]']])('terminal %s/%s ignores stale sequence and public evidence',async(type,status,title)=>{
+  const old=app('1','040',{forecast_status:'PROCESSING',match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE',display_sequence:1,remarks:'기존',mooring_name:'글로'});
+  const next={...old,application_status:status,pilot_time:'13:00',to_location:'JSTT',remarks:'확정'};
+  const changes=[type,'TIME_CHANGED','ROUTE_CHANGED','REMARK_CHANGED','STATUS_CHANGED'].map(type=>({type,old,new:next,operational_continuous:true}));
+  const messages=await rpc('hpbot_schedule_messages',[j(changes)]);expect(messages).toHaveLength(1);const text=messages[0];
+  expect(text.split('\n')[0]).toBe(title);expect(text).toContain('비고: 기존 → 확정');expect(text).toContain('강취: 글로');
+  for(const forbidden of ['현재 순번:','공개:','신청:','상태:'])expect(text).not.toContain(forbidden);
+ });
+ it('POB -> complete -> billing emits exactly one completion receipt when enabled',async()=>{
+  await db.exec(`insert into pilot_telegram_chats(chat_id,settings) values('-1','{"COMPLETED":true}');update hpbot_control set primary_chat_id='-1'`);
+  await tick(0,[app('1','040')],[forecast('1','PROCESSING')]);await tick(1,[app('1','050')],null);await tick(2,[app('1','060')],null);
+  const ns=await notices();expect(ns).toHaveLength(1);expect(ns[0].message.split('\n')[0]).toBe('✅ [도선완료]');
+  expect(ns[0].message).not.toMatch(/현재 순번:|공개:|신청:/);
+  expect((await db.query("select count(*)::int n from hpbot_pilot_history where event_type='COMPLETED'")).rows[0].n).toBe(1);
+ });
+ it.each(['PROCESSING','POB','BAD_WEATHER'])('%s end retains an event-specific title and no empty public row',async(status)=>{
+  const old=app('1',status==='POB'?'040':'020',{forecast_status:status,match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE'});
+  const next={...old,application_status:'020',forecast_status:'UNSPECIFIED'};
+  const messages=await rpc('hpbot_schedule_messages',[j([{type:'STATUS_CHANGED',old,new:next,operational_continuous:true}])]);
+  expect(messages).toHaveLength(1);expect(messages[0].split('\n')[0]).toBe('🔄 [도선상태 변경]');
+  expect(messages[0]).toContain(`상태: ${status==='BAD_WEATHER'?'BAD WEATHER':status} → 표시 종료`);expect(messages[0]).not.toContain('공개:');
+ });
+ it('current remarks stay visible on route and operational alerts without becoming extra change events',async()=>{
+  const old=app('1','020',{forecast_status:'UNSPECIFIED',match_basis:'UNIQUE_CALLSIGN_VESSEL_DATE_ROUTE',remarks:'  승선  전\n연락 ',mooring_name:'진산'});
+  for(const [type,extra] of [['ROUTE_CHANGED',{to_location:'JSTT'}],['STATUS_CHANGED',{forecast_status:'PROCESSING'}]] as const){
+   const messages=await rpc('hpbot_schedule_messages',[j([{type,old,new:{...old,...extra},operational_continuous:true}])]);
+   expect(messages).toHaveLength(1);expect(messages[0]).toContain('비고: 승선 전 연락');expect(messages[0]).toContain('강취: 진산');
+   expect(messages[0]).not.toContain('비고: 승선 전 연락 →');
+  }
+ });
+ it('different applications keep their own event title even on the same vessel',async()=>{
+  const first=app('1','020',{vessel_name:'SAME SHIP'}),second=app('2','020',{vessel_name:'SAME SHIP'});
+  const messages=await rpc('hpbot_schedule_messages',[j([{type:'TIME_CHANGED',old:first,new:{...first,pilot_time:'13:00'}},{type:'REMARK_CHANGED',old:second,new:{...second,remarks:'검역'}}])]);
+  expect(messages).toHaveLength(2);expect(messages.map((m:string)=>m.split('\n')[0])).toEqual(['⏰ [도선시간 변경]','📝 [비고 변경]']);
+  expect(messages.every((m:string)=>m.split('SAME SHIP').length===2)).toBe(true);
+ });
+ it('title helper rejects non-semantic changes and stays service-only',async()=>{
+  expect(await rpc('hpbot_notification_title',[j([{type:'STATUS_CHANGED',old:app('1','020'),new:app('1','030')}])])).toBe('');
+  await db.exec('set role anon');await expect(rpc('hpbot_notification_title',['[]'])).rejects.toThrow('permission denied');await db.exec('reset role');
  });
  it('remark setting can be toggled without changing existing setting keys',async()=>{
   await db.exec(`insert into pilot_telegram_chats(chat_id) values('-1');update hpbot_control set primary_chat_id='-1'`);
@@ -493,5 +558,5 @@ describe('atomic dual-source commit',()=>{
    expect((await db.query('select max(revision)::int n from hpbot_pilot_current')).rows[0].n).toBe(1);
    expect((await db.query("select count(*)::int n from pilot_notifications where notification_type='WEATHER_SUSPEND'")).rows[0].n).toBe(1);
    expect((await db.query('select count(*)::int n from pilot_monitor_logs')).rows[0].n).toBe(44640);
- },240000);
+ },420000);
 });

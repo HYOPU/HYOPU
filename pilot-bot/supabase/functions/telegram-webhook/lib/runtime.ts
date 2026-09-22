@@ -8,6 +8,7 @@ import { handleRegistrationUpdate, registrationMenuRows } from './registration.t
 import type { PilotRegistrationSettings } from './registration.ts';
 import { isPilotRoomParticipant } from '../../_shared/pilotRoomAccess.ts';
 import { pilotDateTimeLabel } from '../../_shared/pilotDateTime.ts';
+import { pilotSuspensionSummary } from '../../_shared/pilotSuspension.ts';
 import { formatJstt,jsttMenu,jsttMiniUrl } from '../../_shared/jstt.ts';
 export interface WebhookConfig extends Config { webhookSecret:string; adminChats:string[]; botUsername:string; gatewayJwt:string; registration?:PilotRegistrationSettings; miniAppEnabled?:boolean }
 export async function telegramApi(config:Config,method:string,payload:unknown,fetcher:typeof fetch=fetch){
@@ -42,7 +43,7 @@ export function createWebhook(config:WebhookConfig,fetcher:typeof fetch=fetch){
          const view=command.name.slice(5);let refresh='';
          if(view==='refresh')refresh=String(await rpc('jstt_dispatch',{p_manual:true}));
          const data=await rpc<any>('jstt_read',{p_chat:chat,p_view:['current','watchlist','changes'].includes(view)?view:'current',p_page:command.page??0},24000);
-         text=(refresh?({RUN:'🔄 새 조회를 시작했습니다. 아래는 마지막 정상 자료입니다.\n\n',JOINED:'🔄 이미 조회 중입니다.\n\n',COOLDOWN:'30초 후 다시 확인해 주세요.\n\n',RECENT:'방금 확인한 정상 자료입니다.\n\n'} as Record<string,string>)[refresh]??'⏸ JSTT 조회가 중지되어 있습니다.\n\n':'')+formatJstt(data,view);
+         text=(refresh?({RUN:'🔄 새 조회를 시작했습니다. 아래는 마지막 수집 자료입니다.\n\n',JOINED:'🔄 이미 조회 중입니다.\n\n',COOLDOWN:'30초 후 다시 확인해 주세요.\n\n',RECENT:'방금 수집한 자료입니다.\n\n'} as Record<string,string>)[refresh]??'⏸ JSTT 조회가 중지되어 있습니다.\n\n':'')+formatJstt(data,view);
          const rows=[...jsttMenu.inline_keyboard];
          if(config.miniAppEnabled&&/^[A-Za-z0-9_]{5,32}$/.test(config.botUsername))rows.unshift([{text:'➕ 특정선박 추가 / ➖ 삭제 (인앱)',url:jsttMiniUrl(config.botUsername)}] as any);
          if(view!=='changes'&&data.total>10){const p=command.page??0;const paging:any[]=[];if(p>0)paging.push({text:'◀ 이전',callback_data:`v1:jstt:${view==='watchlist'?'watchlist':'current'}:${p-1}`});if((p+1)*10<data.total)paging.push({text:'다음 ▶',callback_data:`v1:jstt:${view==='watchlist'?'watchlist':'current'}:${p+1}`});rows.unshift(paging);}
@@ -83,7 +84,7 @@ export function createWebhook(config:WebhookConfig,fetcher:typeof fetch=fetch){
            if(data.last_success!==previous){observed=true;break;}
          }
        }
-       text=`${state==='STOPPED'?'⏸ 감시가 중지되어 있습니다.':state==='COOLDOWN'?'잠시 후 다시 조회해 주세요. (30초 제한)':observed?'✅ 조회 완료':state==='JOINED'?'조회가 진행 중입니다. 아래는 마지막 정상 결과입니다.':'⚠️ 새 관측이 확정되지 않았습니다. 마지막 정상 결과를 표시합니다.'}\n전체 미완료: ${data.active}건\nBAD WEATHER: ${data.bad_weather_count}척\n마지막 정상확인: ${kst(data.last_success)}`;
+       text=`${state==='STOPPED'?'⏸ 감시가 중지되어 있습니다.':state==='COOLDOWN'?'잠시 후 다시 조회해 주세요. (30초 제한)':observed?'✅ 조회 완료':state==='JOINED'?'조회가 진행 중입니다. 아래는 마지막 정상 결과입니다.':'⚠️ 새 관측이 확정되지 않았습니다. 마지막 정상 결과를 표시합니다.'}\n전체 미완료: ${data.active}건\n${pilotSuspensionSummary(data)}\n마지막 정상확인: ${kst(data.last_success)}`;
      }else if(!text&&command.name==='test')text='✅ [도선봇 테스트 알림]\nTelegram 명령 수신 → 채팅방 참여 확인 → DB 발송 예약을 통과했습니다.';
      else if(!text&&command.name==='search'&&!command.search)text='검색할 선박명을 입력해 주세요.\n예: 선박검색 GINGA TIGER\n등록된 선박명만 입력해도 조회할 수 있습니다.';
      if(!text){const data=command.name==='queue'
@@ -91,7 +92,7 @@ export function createWebhook(config:WebhookConfig,fetcher:typeof fetch=fetch){
        :await rpc<any>('hpbot_read',{p_command:command.name,p_page:command.page??0,p_search:command.search??'',p_chat:chat},24000);
        const reply=formatReply(command,data);text=reply.text;markup=reply.markup;
        if(['health','debug'].includes(command.name)){
-         try{const j=await rpc<any>('jstt_read',{p_chat:chat,p_view:'health'},4096);text+=`\n\nJSTT (20분 간격): ${!j.enabled?'중지':j.failure_count?'오류':!j.last_success||Date.now()-Date.parse(j.last_success)>25*60000?'관측 지연':'정상'}\n정상확인: ${kst(j.last_success)} / 연속 오류 ${j.failure_count}`;}catch{text+='\nJSTT: 확인 불가';}
+         try{const j=await rpc<any>('jstt_read',{p_chat:chat,p_view:'health'},4096);text+=`\n\nJSTT (20분 간격): ${!j.enabled?'중지':j.failure_count?'오류':!j.last_success||Date.now()-Date.parse(j.last_success)>25*60000?'관측 지연':j.unknown_count||j.quality_status==='DEGRADED'?'일부 부두 확인 필요':'정상'}\n마지막 수집: ${kst(j.last_success)} / 연속 오류 ${j.failure_count}${j.unknown_count?`\n미확인 부두: ${j.unknown_count}건 (기존 배정 유지)`:''}`;}catch{text+='\nJSTT: 확인 불가';}
        }
        if(config.miniAppEnabled&&['queue','search'].includes(command.name)&&/^[A-Za-z0-9_]{5,32}$/.test(config.botUsername)){
          const links=await rpc<Record<string,string>>('pilot_copy_links',{p_applications:(data.rows??[]).map((x:any)=>x.application_id).filter(Boolean).slice(0,10)});

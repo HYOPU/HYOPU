@@ -11,7 +11,7 @@ async function draft(user=123,action='CREATE'){const u=await accepted(user);cons
 async function confirmed(user=123){const r=await draft(user);const u=await accepted(user);expect(await rpc('pilot_reg_decide',[u,r.id,1,'CONFIRM'])).toBe('CONFIRMED');return r.id;}
 beforeAll(async()=>{db=new PGlite();await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
  for(const file of ['20260920000000_ulsan_pilot_watcher','20260920000300_hpbot_operations','20260920000400_hpbot_telegram','20260920000500_hpbot_query_context','20260920000600_hpbot_mooring','20260920000700_pilot_registration'])await db.exec(readFileSync('supabase/migrations/'+file+'.sql','utf8'));
- for(const f of ['20260920001300_pilot_pob_date_labels','20260921001500_pilot_pob_identity','20260921001600_pilot_concise_notifications','20260922002400_pilot_notification_policy','20260922002500_pilot_event_titles'])await db.exec(readFileSync('supabase/migrations/'+f+'.sql','utf8'));
+ for(const f of ['20260920001300_pilot_pob_date_labels','20260921001500_pilot_pob_identity','20260921001600_pilot_concise_notifications','20260922002400_pilot_notification_policy','20260922002500_pilot_event_titles','20260922003400_pilot_event_presentation','20260922003500_pilot_query_presentation'])await db.exec(readFileSync('supabase/migrations/'+f+'.sql','utf8'));
 },30000);
 afterAll(async()=>{await db?.close();});
 beforeEach(async()=>{await db.exec(`truncate pilot_action_logs,pilot_registration_requests,pilot_telegram_updates,pilot_telegram_chats,hpbot_pilot_current,hpbot_pilot_history,hpbot_source_snapshots,pilot_monitor_logs,pilot_notifications,pilot_notification_attempts,pilot_weather_events,pilot_snapshots,pilot_runs,pilot_usage;

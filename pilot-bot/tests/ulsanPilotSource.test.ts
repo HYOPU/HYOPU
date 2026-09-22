@@ -18,6 +18,23 @@ describe("observed Ulsan HTML contract", () => {
     const [result] = await parseForecast(row(c), "2026-09-20", true);
     expect(result.status).toBe("CANCELLED"); expect(result.raw_status).toBe("PROCESSING");
   });
+  it.each([
+    ['Dense fog', 'DENSE_FOG'], ['DENSE  FOG', 'DENSE_FOG'], ['dense\u00a0fog', 'DENSE_FOG'],
+    ['Port close', 'PORT_CLOSE'], ['PORT\n CLOSE', 'PORT_CLOSE'], [' port close ', 'PORT_CLOSE'],
+  ])('normalizes the exact suspension status %j while preserving the source text', async (raw, expected) => {
+    const c = [...cells]; c[1] = raw;
+    const [result] = await parseForecast(row(c), '2026-09-20', false);
+    expect(result.status).toBe(expected);
+    expect(result.raw_status).toBe(raw.replace(/\s+/gu, ' ').trim());
+    expect(normalizeStatus(raw)).toBe(expected);
+  });
+  it.each(['FOG', 'DENSEFOG', 'DENSE-FOG', 'PORT CLOSED', 'CLOSE PORT', 'PORT-CLOSE'])('never invents a suspension alias for %s', raw => {
+    expect(normalizeStatus(raw)).toBe(raw);
+  });
+  it.each(['DENSE FOG','PORT CLOSE'])('cancellation status overrides %s',async raw=>{
+    const c=[...cells];c[1]=raw;const [result]=await parseForecast(row(c),'2026-09-20',true);
+    expect(result.status).toBe('CANCELLED');expect(result.raw_status).toBe(raw);
+  });
   it("rejects malformed, blocked and unverified empty responses", async () => {
     for (const html of ["", "error", "<html>blocked</html>", row(cells.slice(1))]) await expect(parseForecast(html,"2026-09-20",false)).rejects.toThrow();
   });

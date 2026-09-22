@@ -1,5 +1,18 @@
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const dateLabel=s=>{if(!s)return '미확인';const d=new Date(s.replace(' ','T')+':00+09:00');return `${s.slice(5,10).replace('-','/')}(${['일','월','화','수','목','금','토'][new Date(d.getTime()+9*3600000).getUTCDay()]}) ${s.slice(11,16).replace(':','')}`;};
+const berthLabel=value=>value==='UNASSIGNED'?'부두 미정':typeof value==='string'&&value&&value!=='UNKNOWN'?value:'확인 필요';
+const isUnverified=row=>row.berth_verified===false||row.normalized_berth==='UNKNOWN';
+const observedLabel=value=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'확인 기록 없음';
+const qualityWarning=data=>{
+ const count=Math.max(Number(data.unknown_count)||0,(data.rows??[]).filter(isUnverified).length);
+ return count||data.quality_status==='DEGRADED'?`⚠️ 부분 확인: ${count?`부두 미검증 ${count}건`:'일부 부두값 확인 필요'} · 마지막 검증값을 유지합니다.`:'';
+};
+const berthDetail=row=>{
+ if(!isUnverified(row))return berthLabel(row.normalized_berth);
+ const raw=String(row.observed_raw_berth??row.raw_berth??'').trim()||'(빈 값)';
+ const prior=typeof row.normalized_berth==='string'&&row.normalized_berth&&row.normalized_berth!=='UNKNOWN';
+ return `⚠️ 부두 확인 필요 · 원문: ${raw}\n마지막 검증 부두: ${prior?berthLabel(row.normalized_berth):'확인 기록 없음'}${row.last_verified_at?`\n마지막 검증 시각: ${observedLabel(row.last_verified_at)}`:''}`;
+};
 export function mountJstt(root,api,{reference,onBack}={}){
  let state={rows:[],total:0,page:0},view='current',busy=false,error='',notice='',search='',vessel='',agency='',anyAgency=true,confirmation=null;
  const button=(label,fn)=>{const b=el('button',label,'button');b.type='button';b.disabled=busy;b.addEventListener('click',fn);return b;};
@@ -22,7 +35,8 @@ export function mountJstt(root,api,{reference,onBack}={}){
   root.replaceChildren(el('h1','⚓ JSTT 부두 감시'),el('p','20분마다 자동 수집 · 접안 예정일 오늘~7일 후 · 협운 자동감시','muted'));
   const nav=el('div',undefined,'row');for(const [label,op]of[['현재 배정현황','jsttCurrent'],['감시목록','jsttWatchlist'],['최근 변경','jsttChanges'],['즉시 확인','jsttRefresh']])nav.append(button(label,()=>call(op,{page:0})));root.append(nav);
   if(error)root.append(el('p',error,'error'));if(notice)root.append(el('p',notice,'notice'));
-  root.append(el('p',`마지막 정상확인: ${state.last_success?new Date(state.last_success).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'없음'}${!state.enabled?' · 감시 중지':''}${state.last_success&&Date.now()-Date.parse(state.last_success)>25*60000?' · 최신 자료 아님':''}`,'muted'));
+  root.append(el('p',`마지막 수집: ${observedLabel(state.last_success)}${!state.enabled?' · 감시 중지':''}${state.last_success&&Date.now()-Date.parse(state.last_success)>25*60000?' · 최신 자료 아님':''}`,'muted'));
+  const warning=qualityWarning(state);if(warning)root.append(el('p',warning,'notice'));
   const section=el('section');section.append(el('h2','감시선박 등록'),el('p','선박명만 입력하세요. 대리점과 관계없이 감시합니다.','muted'));
   const form=el('div',undefined,'form-grid');
   const field=(label,value,change)=>{const wrap=el('div',undefined,'form-field'),l=el('label',label),input=el('input');input.id='jstt-'+(label.startsWith('선박')?'vessel':'agency');l.htmlFor=input.id;input.value=value;input.maxLength=120;input.disabled=busy;input.addEventListener('input',()=>{change(input.value);clearConfirmation();});wrap.append(l,input);return {wrap,input};};
@@ -35,8 +49,8 @@ export function mountJstt(root,api,{reference,onBack}={}){
   root.append(el('h2',view==='watchlist'?'특정선박 감시목록':view==='changes'?'최근 부두 변경':view==='search'?'JSTT 선박 검색 결과':'현재 감시대상 부두현황'));
   for(const r of state.rows??[]){const card=el('section');card.append(el('h3',r.vessel_name),el('p',r.agency_name??'대리점 무관'));
    if(view==='watchlist'){card.append(el('p',r.matched?'현재 일정 확인됨':'현재 일정 없음 / 사이트 일치 확인 전'),button('감시삭제',()=>{confirmation={action:'remove',id:r.id,vessel:r.vessel_name,agency:r.agency_name};render();}));}
-   else if(view==='changes')card.append(el('p',`${r.old_berth==='UNASSIGNED'||!r.old_berth?'미정':r.old_berth} → ${r.new_berth==='UNASSIGNED'?'미정':r.new_berth}`));
-   else{card.append(el('p',dateLabel(r.schedule_datetime)),el('p',`${r.normalized_berth==='UNASSIGNED'?'부두 미정':r.normalized_berth}${r.missing_count?' · 조회 누락 확인 중':''}`));if(view==='search')card.append(button('이 선박 선택',()=>{vessel=r.vessel_name;confirmation=null;render();}));}
+   else if(view==='changes')card.append(el('p',`${berthLabel(r.old_berth??'UNASSIGNED')} → ${berthLabel(r.new_berth)}`));
+   else{const detail=el('p',`${berthDetail(r)}${r.missing_count?' · 조회 누락 확인 중':''}`);detail.style.whiteSpace='pre-line';card.append(el('p',dateLabel(r.schedule_datetime)),detail);if(view==='search')card.append(button('이 선박 선택',()=>{vessel=r.vessel_name;confirmation=null;render();}));}
    root.append(card);
   }
   if(!state.rows?.length){
