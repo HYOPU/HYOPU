@@ -3,7 +3,9 @@
 Independent HYOPU Telegram/mini-app module. Source-port provenance is in
 `PORT_MANIFEST.json`. The database module is isolated, but the earlier Vercel
 deployment did replace a newer operations-site bundle with this older checkout.
-Do not equate database isolation with preserved web deployment behavior.
+On 2026-09-22, the approved dedicated-host migration was completed and the
+operations site restored to its legitimate deployment. Do not equate database
+isolation with preserved web deployment behavior.
 
 ## Deployment boundaries
 
@@ -12,11 +14,15 @@ Do not equate database isolation with preserved web deployment behavior.
 - Do **not** deploy this package to the Dongjin project.
 - Existing portal `hyopu_*` RPCs are unrelated and must keep their definitions,
   grants and RLS. Additive migration provisioning verifies those boundaries.
-- Vercel current runtime: `hyopu`, mini app `/pilot-bot/`, collector `/api/hpbot-jstt`.
-  **Deployment frozen:** that project is linked to the different repository
-  `Hestiafamily/hyopu-operations-workspace`. Do not redeploy this checkout there,
-  change that Git link, or remove Git metadata to force a deployment. Dedicated
-  bot hosting and restoration of the operations-site bundle await user approval.
+- Vercel bot runtime: `hyopu-pilot-bot`, project
+  `prj_MiqijgcBtjGxlaFOXDItoLQukEkU`, origin `https://hyopu-pilot-bot.vercel.app`,
+  mini app `/pilot-bot/`, collector `/api/hpbot-jstt`.
+  Deploy only from this `pilot-bot/` directory. The build pins its project ID and
+  publishes only seven mini-app assets, not the legacy portal.
+- Existing Vercel `hyopu` remains linked to
+  `Hestiafamily/hyopu-operations-workspace`. It was restored to deployment
+  `dpl_83qaoUMcS5Ws4nnkmDgbfnmFaatf`. Never deploy this checkout there, change its
+  Git link, or remove Git metadata to force deployment.
   See `reports/2026-09-22-deployment-boundary.md`.
 - Telegram: `@hyopu_ulsan_pilot_20260922_bot`, allowed room `-1004425641291`.
 
@@ -73,6 +79,10 @@ npm run build
 cd pilot-bot
 npm ci
 npm test
+npm run build
+# Verify pilot-bot/.vercel/project.json is the dedicated project above first.
+# This project currently uses explicit CLI releases, not Git auto-deploy.
+pnpm dlx vercel@59.25.0 deploy --prod --yes --scope hestias-projects-57e91111
 pnpm dlx supabase@2.117.0 functions deploy ulsan-pilot-watcher --project-ref nhujqbqygnhbnvmfmodi
 pnpm dlx supabase@2.117.0 functions deploy telegram-webhook --project-ref nhujqbqygnhbnvmfmodi
 pnpm dlx supabase@2.117.0 functions deploy pilot-miniapp --project-ref nhujqbqygnhbnvmfmodi
@@ -94,8 +104,8 @@ HTML is ingress, not counted as Supabase billed egress. Supabase Pro Spend Cap
 is organization-wide and does not cover Vercel CPU/memory charges.
 
 See `reports/2026-09-22-hyopu-operations.md` for live evidence and limitations.
-Latest functional sync, its production verification and the separate Vercel
-deployment blocker are recorded in `reports/2026-09-22-latest-sync.md`.
+Latest functional sync, dedicated-host production verification and operations
+site recovery are recorded in `reports/2026-09-22-latest-sync.md`.
 
 For bounded, read-only operational follow-up, from `pilot-bot/` run:
 

@@ -17,7 +17,9 @@ Vercel Framework Preset은 **Other**, 빌드 명령은 `npm run build`, 출력 �
 `Hestiafamily/hyopu-operations-workspace`의 `main`에 연결되어 있습니다.
 이 `HYOPU/HYOPU` 체크아웃을 `hyopu-ten.vercel.app`에 수동 배포하면 기존 운영
 사이트의 최신 기능을 오래된 기반 코드로 덮어쓸 수 있으므로 **다시 배포하지 마세요**.
-도선봇 전용 배포 분리와 기존 운영 사이트 복구는 사용자 승인 대기 중입니다.
+사용자 승인 후 도선봇은 `hyopu-pilot-bot.vercel.app` 전용 프로젝트로 분리했고,
+기존 사이트는 정상 Git 배포 `ae5be166`으로 복구했습니다. 봇 배포는 반드시
+`pilot-bot/`에서만 실행합니다. 이 루트의 운영 프로젝트 연결로 봇을 배포하지 마세요.
 근거와 복구 경계는 `pilot-bot/reports/2026-09-22-deployment-boundary.md`에 기록했습니다.
 `jhmarine.kr` 역시 별도 저장소/프로젝트이며 이 프로젝트의 배포 대상이 아닙니다.
 
