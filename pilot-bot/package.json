@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/build-host.mjs",
     "test": "vitest run",
     "probe:source": "node scripts/probe-source.mjs"
   },

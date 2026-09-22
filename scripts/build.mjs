@@ -1,5 +1,9 @@
 import { build } from 'esbuild';
 import { mkdir, copyFile, cp } from 'node:fs/promises';
+// This legacy checkout is not the current hyopu-operations-workspace repository.
+if (process.env.VERCEL_PROJECT_ID === 'prj_xUTiRACfyBURBplLBcX3hlrGPx3g') {
+  throw Error('WRONG_DEPLOYMENT_BOUNDARY: do not overwrite the operations portal from this checkout');
+}
 await mkdir('dist/templates', {recursive:true});
 await build({entryPoints:['app.js'],bundle:true,format:'esm',outfile:'dist/app.js',minify:true});
 await build({entryPoints:['dashboard.js'],bundle:true,format:'esm',outfile:'dist/dashboard.js',minify:true});

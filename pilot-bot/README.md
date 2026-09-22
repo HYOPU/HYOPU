@@ -1,7 +1,9 @@
 # HYOPU pilot bot
 
-Independent HYOPU Telegram/mini-app module. Existing portal and LINE UP business
-logic is not replaced. Source-port provenance is in `PORT_MANIFEST.json`.
+Independent HYOPU Telegram/mini-app module. Source-port provenance is in
+`PORT_MANIFEST.json`. The database module is isolated, but the earlier Vercel
+deployment did replace a newer operations-site bundle with this older checkout.
+Do not equate database isolation with preserved web deployment behavior.
 
 ## Deployment boundaries
 
@@ -10,7 +12,12 @@ logic is not replaced. Source-port provenance is in `PORT_MANIFEST.json`.
 - Do **not** deploy this package to the Dongjin project.
 - Existing portal `hyopu_*` RPCs are unrelated and must keep their definitions,
   grants and RLS. Additive migration provisioning verifies those boundaries.
-- Vercel: `hyopu`, mini app `/pilot-bot/`, isolated collector `/api/hpbot-jstt`.
+- Vercel current runtime: `hyopu`, mini app `/pilot-bot/`, collector `/api/hpbot-jstt`.
+  **Deployment frozen:** that project is linked to the different repository
+  `Hestiafamily/hyopu-operations-workspace`. Do not redeploy this checkout there,
+  change that Git link, or remove Git metadata to force a deployment. Dedicated
+  bot hosting and restoration of the operations-site bundle await user approval.
+  See `reports/2026-09-22-deployment-boundary.md`.
 - Telegram: `@hyopu_ulsan_pilot_20260922_bot`, allowed room `-1004425641291`.
 
 ## Runtime
@@ -58,7 +65,8 @@ Provisioning scripts read credentials through stdin, not shell arguments.
 ## Verification and deployment
 
 ```powershell
-# Existing portal regression/build (repository root)
+# This checkout's legacy SOF/operations regression/build, NOT the live
+# hyopu-operations-workspace repository's regression suite (repository root)
 npm test
 npm run build
 # Pilot module
@@ -104,5 +112,6 @@ not proof that every possible concurrent external action is prevented.
 
 GitHub runs the isolated `HYOPU pilot bot verification` workflow for module-related
 PRs and main updates. It uses Node 22 and two test workers, without production
-secrets or deployment rights. The existing portal verification remains separate;
-a green portal-only check is not evidence that the pilot module tests ran.
+secrets or deployment rights. The root verification covers this checkout only;
+it does not establish regression coverage of the newer operations repository.
+A green root-only check is not evidence that the pilot module tests ran.
