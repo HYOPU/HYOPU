@@ -26,9 +26,13 @@ if(result.rows?.length!==1||typeof secret!=='string'||secret.length<32)throw Err
 console.log(JSON.stringify({verified:'existing_dispatch_key'}));
 const values={HPBOT_SUPABASE_SERVICE_KEY:service,HPBOT_JSTT_KEY:secret,HPBOT_JSTT_USER_ID:credentials.user,HPBOT_JSTT_PASSWORD:credentials.password,HPBOT_JSTT_ENABLED:'true'};
 const existing=await vc(`/v9/projects/${botProject}/env?teamId=${team}`);
-if(existing.envs.some(e=>e.key.startsWith('HPBOT_')))throw Error('TARGET_ALREADY_CONFIGURED');
+if(existing.envs.some(e=>e.key.startsWith('HPBOT_')&&e.key!=='HPBOT_JSTT_ENABLED'))throw Error('TARGET_ALREADY_CONFIGURED');
 console.log(JSON.stringify({verified:'empty_target_environment'}));
-await vc(`/v10/projects/${botProject}/env?teamId=${team}`,Object.entries(values).map(([key,value])=>({key,value,type:'sensitive',target:['production']})));
+for(const [key,value] of Object.entries(values)){
+ if(existing.envs.some(e=>e.key===key))continue;
+ await vc(`/v10/projects/${botProject}/env?teamId=${team}`,{key,value,type:'sensitive',target:['production']});
+ console.log(JSON.stringify({storedKey:key}));
+}
 const after=await vc(`/v9/projects/${botProject}/env?teamId=${team}`);
 if(Object.keys(values).some(key=>!after.envs.some(e=>e.key===key&&e.type==='sensitive'&&e.target.includes('production'))))throw Error('ENV_VERIFICATION_FAILED');
 console.log(JSON.stringify({stored:true,project:target.name,keys:Object.keys(values),portalKeysCopied:false,sourceSecretsChanged:false}));
