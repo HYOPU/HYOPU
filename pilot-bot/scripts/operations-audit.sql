@@ -9,6 +9,12 @@ with bounds as (
 ), slots as (
  select s from bounds, lateral generate_series(date_trunc('minute',since),
    date_trunc('minute',checked_at)-interval '1 minute', interval '1 minute') s
+), recent_runs as (
+ select r.estimated_bytes,r.ingress_bytes,r.finished_at,
+   exists(select 1 from public.hpbot_source_snapshots s where s.observed_at=r.finished_at) as new_source_snapshot
+ from public.pilot_runs r,bounds b
+ where r.success and r.finished_at>=b.checked_at-interval '15 minutes'
+   and r.finished_at<=b.checked_at
 ), bot_tables as (
  select c.oid,c.relname,c.relrowsecurity from pg_class c
  join pg_namespace n on n.oid=c.relnamespace
@@ -33,6 +39,16 @@ select jsonb_build_object(
    'average_estimated_bytes',round(avg(estimated_bytes)),
    'last_success',max(finished_at) filter(where success))
    from public.pilot_runs where started_at>=b.since),
+ 'last_fifteen_minutes',(select jsonb_build_object(
+   'successful_runs',count(*),'unchanged_runs',count(*) filter(where not new_source_snapshot),
+   'unchanged_average_estimated_bytes',round(avg(estimated_bytes) filter(where not new_source_snapshot)),
+   'unchanged_max_estimated_bytes',max(estimated_bytes) filter(where not new_source_snapshot),
+   'source_snapshot_writes',(select count(*) from public.hpbot_source_snapshots,bounds b
+     where observed_at>=b.checked_at-interval '15 minutes' and observed_at<=b.checked_at),
+   'html_ingress_bytes',coalesce(sum(ingress_bytes),0),
+   'unchanged_mean_target_bytes',8192,'estimate_basis','reserved_execution_budget',
+   'measured_transfer_target_verified',false,'provider_billed_bytes',null)
+   from recent_runs),
  'pilot_missing_full_minutes',(select count(*) from slots s where not exists
    (select 1 from public.pilot_runs r where r.slot=s.s)),
  'monitor_logs',(select jsonb_build_object('count',count(*),

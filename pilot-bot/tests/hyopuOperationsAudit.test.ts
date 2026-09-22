@@ -43,6 +43,24 @@ it('counts complete 24-hour scheduled windows independently of test intent',asyn
  expect(r.jstt_missing_scheduled_slots).toBe(72);
 });
 
+it('separates unchanged transfer estimates from changed snapshots and HTML ingress',async()=>{
+ await db.exec(`insert into pilot_runs(id,slot,started_at,finished_at,success,estimated_bytes,ingress_bytes) values
+ ('00000000-0000-0000-0000-000000000101','2026-09-22 02:29:00+00','2026-09-22 02:29:00+00','2026-09-22 02:29:05+00',true,6000,200000),
+ ('00000000-0000-0000-0000-000000000102','2026-09-22 02:30:00+00','2026-09-22 02:30:00+00','2026-09-22 02:30:05+00',true,50000,300000);
+ insert into hpbot_source_snapshots(source,content_hash,rows,observed_at)
+ values('applications','audit_changed','[]','2026-09-22 02:30:05+00');`);
+ try{
+  const r=await audit('2026-09-22 02:31:30+00');
+  expect(r.last_fifteen_minutes).toEqual({successful_runs:2,unchanged_runs:1,
+   unchanged_average_estimated_bytes:6000,unchanged_max_estimated_bytes:6000,
+   source_snapshot_writes:1,html_ingress_bytes:500000,unchanged_mean_target_bytes:8192,
+   estimate_basis:'reserved_execution_budget',measured_transfer_target_verified:false,
+   provider_billed_bytes:null});
+ }finally{
+  await db.exec("delete from pilot_runs where id in('00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000102');delete from hpbot_source_snapshots where content_hash='audit_changed';");
+ }
+});
+
 it('flags missing row security and duplicate receipts without changing operational state',async()=>{
  await db.exec(`alter table pilot_usage disable row level security;grant select on pilot_usage to anon;
  insert into pilot_notifications(notification_key,notification_type,reference_id,message,status,telegram_chat_id,telegram_message_id)
