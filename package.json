@@ -9,6 +9,6 @@
     "eta:sync": "node scripts/eta-local-sync.mjs --once",
     "eta:watch": "node scripts/eta-local-sync.mjs --watch"
   },
-  "dependencies": { "fflate": "0.8.2", "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz" },
+  "dependencies": { "fflate": "0.8.2", "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz", "jszip": "3.10.1", "playwright-core": "1.61.1", "@sparticuz/chromium": "149.0.0" },
   "devDependencies": { "@xmldom/xmldom": "0.9.12", "esbuild": "0.25.10" }
 }

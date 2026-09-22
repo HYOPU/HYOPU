@@ -1,0 +1,3 @@
+import { createCopySourceHandler } from './lib/runtime.ts';
+const env=(key:string)=>Deno.env.get(key)??'';
+Deno.serve(createCopySourceHandler({url:env('SUPABASE_URL'),serviceKey:env('SUPABASE_SERVICE_ROLE_KEY'),watcherKey:env('ULSAN_WATCHER_KEY'),operatorKey:env('ULSAN_OPERATOR_KEY'),botToken:env('TELEGRAM_BOT_TOKEN'),chatId:env('TELEGRAM_CHAT_ID'),registration:{username:env('ULSAN_PILOT_USERNAME'),password:env('ULSAN_PILOT_PASSWORD'),sessionKey:env('ULSAN_SESSION_KEY'),transport:env('ULSAN_TRANSPORT')==='http-approved'?'http-approved':'https',createEnabled:false,updateEnabled:false,copyHistoryDays:Number(env('PILOT_COPY_HISTORY_DAYS')||30)}}));

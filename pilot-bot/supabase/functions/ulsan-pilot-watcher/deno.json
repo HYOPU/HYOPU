@@ -1,0 +1,5 @@
+{
+  "imports": { "parse5": "npm:parse5@8.0.0" },
+  "compilerOptions": { "strict": true },
+  "tasks": { "check": "deno check index.ts" }
+}

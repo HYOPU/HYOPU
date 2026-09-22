@@ -5,3 +5,7 @@ node_modules/
 dist/
 *.inspect.ndjson
 ~$*.xlsx
+.vercel
+.env*
+**/supabase/.temp/
+pilot-bot/reports/private/

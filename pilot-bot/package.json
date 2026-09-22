@@ -1,0 +1,12 @@
+{
+  "name": "hyopu-pilot-bot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "probe:source": "node scripts/probe-source.mjs"
+  },
+  "dependencies": { "parse5": "8.0.0", "jszip": "3.10.1", "playwright-core": "1.61.1", "@sparticuz/chromium": "149.0.0" },
+  "devDependencies": { "vitest": "4.1.10", "@electric-sql/pglite": "0.5.8", "happy-dom": "20.11.2", "typescript": "7.0.2", "@types/node": "26.1.1" },
+  "engines": { "node": ">=22" }
+}
